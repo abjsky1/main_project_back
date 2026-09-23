@@ -1,10 +1,10 @@
 -- 1. [부모] 권한 관리 (member_role)
 
-CREATE TABLE member_role (
-role_id          INT AUTO_INCREMENT PRIMARY KEY,
-role_name        VARCHAR(20) NOT NULL UNIQUE,
-role_description VARCHAR(100) NOT NULL
-);
+-- CREATE TABLE member_role (
+-- role_id          INT AUTO_INCREMENT PRIMARY KEY,
+-- role_name        VARCHAR(20) NOT NULL UNIQUE,
+-- role_description VARCHAR(100) NOT NULL
+-- );
 
 INSERT INTO member_role (role_id, role_name, role_description) VALUES
 (1, 'ROLE_USER', '일반 사용자'),
@@ -13,10 +13,10 @@ INSERT INTO member_role (role_id, role_name, role_description) VALUES
 
 -- 2. [부모] 가입 유형 (member_type)
 
-CREATE TABLE member_type (
-signup_type_no INT AUTO_INCREMENT PRIMARY KEY,
-signup_type    VARCHAR(20) NOT NULL
-);
+-- CREATE TABLE member_type (
+-- signup_type_no INT AUTO_INCREMENT PRIMARY KEY,
+-- signup_type    VARCHAR(20) NOT NULL
+-- );
 
 INSERT INTO member_type (signup_type_no, signup_type) VALUES
 (101, '관리자'),
@@ -26,24 +26,24 @@ INSERT INTO member_type (signup_type_no, signup_type) VALUES
 
 -- 3. [부모/자식] 회원 (member)
 
-CREATE TABLE member (
-member_id       INT AUTO_INCREMENT PRIMARY KEY,
-signup_type_no  INT NOT NULL,
-user_email      VARCHAR(100) NOT NULL UNIQUE,
-user_password   VARCHAR(255) NOT NULL,
-company_name    VARCHAR(100) NOT NULL,
-manager_name    VARCHAR(50) NOT NULL,
-department_name VARCHAR(50),
-business_reg_no VARCHAR(12) NOT NULL UNIQUE,
-user_phone      VARCHAR(20) NOT NULL,
-company_address VARCHAR(300) NOT NULL,
-created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-update_at       DATETIME NULL,
-role_id         INT NOT NULL,
-status          INT NOT NULL DEFAULT 1,
-FOREIGN KEY (signup_type_no) REFERENCES member_type(signup_type_no),
-FOREIGN KEY (role_id) REFERENCES member_role(role_id)
-);
+-- CREATE TABLE member (
+-- member_id       INT AUTO_INCREMENT PRIMARY KEY,
+-- signup_type_no  INT NOT NULL,
+-- user_email      VARCHAR(100) NOT NULL UNIQUE,
+-- user_password   VARCHAR(255) NOT NULL,
+-- company_name    VARCHAR(100) NOT NULL,
+-- manager_name    VARCHAR(50) NOT NULL,
+-- department_name VARCHAR(50),
+-- business_reg_no VARCHAR(12) NOT NULL UNIQUE,
+-- user_phone      VARCHAR(20) NOT NULL,
+-- company_address VARCHAR(300) NOT NULL,
+-- created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+-- update_at       DATETIME NULL,
+-- role_id         INT NOT NULL,
+-- status          INT NOT NULL DEFAULT 1,
+-- FOREIGN KEY (signup_type_no) REFERENCES member_type(signup_type_no),
+-- FOREIGN KEY (role_id) REFERENCES member_role(role_id)
+-- );
 
 INSERT INTO member (member_id, signup_type_no, user_email, user_password, company_name, manager_name, department_name, business_reg_no, user_phone, company_address, created_at, update_at, role_id, status) VALUES
 (1, 101, 'abcde@naver.com', 'asd123', 'G-Trade', '이은경', '시스템운영팀', '111-11-11111', '010-1234-5678', '경기도 성남시 분당구 정자일로 95(정자동, 네이버 1784)', '2026-09-21 09:47:23', '2026-09-21 09:47:23', 2, 1),
@@ -55,10 +55,10 @@ INSERT INTO member (member_id, signup_type_no, user_email, user_password, compan
 
 -- 4. [부모] 작업유형 (action)
 
-CREATE TABLE action (
-action_id   INT AUTO_INCREMENT PRIMARY KEY,
-action_type VARCHAR(50) NOT NULL
-);
+-- CREATE TABLE action (
+-- action_id   INT AUTO_INCREMENT PRIMARY KEY,
+-- action_type VARCHAR(50) NOT NULL
+-- );
 
 INSERT INTO action (action_id, action_type) VALUES
 (1, '엑셀 다운로드'),
@@ -76,17 +76,17 @@ INSERT INTO action (action_id, action_type) VALUES
 
 -- 5. [자식] 감사로그 (audit_log)
 
-CREATE TABLE audit_log (
-audit_id      INT AUTO_INCREMENT PRIMARY KEY,
-created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-member_id     INT NOT NULL,
-action_id     INT NOT NULL,
-action_detail VARCHAR(300) NOT NULL,
-fip_address   VARCHAR(45) NOT NULL,
-action_result INT NOT NULL,
-FOREIGN KEY (member_id) REFERENCES member(member_id),
-FOREIGN KEY (action_id) REFERENCES action(action_id)
-);
+-- CREATE TABLE audit_log (
+-- audit_id      INT AUTO_INCREMENT PRIMARY KEY,
+-- created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+-- member_id     INT NOT NULL,
+-- action_id     INT NOT NULL,
+-- action_detail VARCHAR(300) NOT NULL,
+-- fip_address   VARCHAR(45) NOT NULL,
+-- action_result INT NOT NULL,
+-- FOREIGN KEY (member_id) REFERENCES member(member_id),
+-- FOREIGN KEY (action_id) REFERENCES action(action_id)
+-- );
 
 INSERT INTO audit_log (audit_id, created_at, member_id, action_id, action_detail, fip_address, action_result) VALUES
 (1, '2026-09-21 09:47:23', 4, 1, '무역 분석 데이터 다운로드', '10.10.4.52', 1),
@@ -99,14 +99,14 @@ INSERT INTO audit_log (audit_id, created_at, member_id, action_id, action_detail
 
 -- 6. [자식] 수출입 유형 (trade_type)
 
-CREATE TABLE trade_type (
-trade_id       INT AUTO_INCREMENT PRIMARY KEY,
-member_id      INT NOT NULL,
-hs_code        VARCHAR(15) NOT NULL,
-country_id     INT NOT NULL,
-matching_agree BOOLEAN NOT NULL DEFAULT FALSE,
-FOREIGN KEY (member_id) REFERENCES member(member_id)
-);
+-- CREATE TABLE trade_type (
+-- trade_id       INT AUTO_INCREMENT PRIMARY KEY,
+-- member_id      INT NOT NULL,
+-- hs_code        VARCHAR(15) NOT NULL,
+-- country_id     INT NOT NULL,
+-- matching_agree BOOLEAN NOT NULL DEFAULT FALSE,
+-- FOREIGN KEY (member_id) REFERENCES member(member_id)
+-- );
 
 INSERT INTO trade_type (trade_id, member_id, hs_code, country_id, matching_agree) VALUES
 (1, 2, '8431200000', 1233, TRUE),
@@ -117,16 +117,16 @@ INSERT INTO trade_type (trade_id, member_id, hs_code, country_id, matching_agree
 
 -- 7. [독립] 국가별 품목별 수출입 (trade_statistics)
 
-CREATE TABLE trade_statistics (
-country_trade_id INT AUTO_INCREMENT PRIMARY KEY,
-trade_balance    DECIMAL(18,2) NOT NULL,
-export_amount    DECIMAL(18,2) NOT NULL,
-export_weight    DECIMAL(18,3) NULL,
-hs_code          VARCHAR(15) NOT NULL,
-import_amount    DECIMAL(18,2) NOT NULL,
-import_weight    DECIMAL(18,3) NULL,
-country_id       INT NOT NULL
-);
+-- CREATE TABLE trade_statistics (
+-- country_trade_id INT AUTO_INCREMENT PRIMARY KEY,
+-- trade_balance    DECIMAL(18,2) NOT NULL,
+-- export_amount    DECIMAL(18,2) NOT NULL,
+-- export_weight    DECIMAL(18,3) NULL,
+-- hs_code          VARCHAR(15) NOT NULL,
+-- import_amount    DECIMAL(18,2) NOT NULL,
+-- import_weight    DECIMAL(18,3) NULL,
+-- country_id       INT NOT NULL
+-- );
 
 INSERT INTO trade_statistics (country_trade_id, trade_balance, export_amount, export_weight, hs_code, import_amount, import_weight, country_id) VALUES
 (1, -23972, 0, 0, '3506102000', 23972, 40, 1001),
@@ -143,19 +143,19 @@ INSERT INTO trade_statistics (country_trade_id, trade_balance, export_amount, ex
 
 -- 8. [자식] 매칭 결과 로그 (match_log)
 
-CREATE TABLE match_log (
-match_id               INT AUTO_INCREMENT PRIMARY KEY,
-company_member_id      INT NOT NULL,
-logistics_member_id    INT NOT NULL,
-matched_country_count  INT NOT NULL DEFAULT 0,
-matched_hscode_count   INT NOT NULL DEFAULT 0,
-country_trade_id       INT NOT NULL,
-match_status_update_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-match_status           INT NOT NULL,
-FOREIGN KEY (company_member_id) REFERENCES member(member_id),
-FOREIGN KEY (logistics_member_id) REFERENCES member(member_id),
-FOREIGN KEY (country_trade_id) REFERENCES trade_statistics(country_trade_id)
-);
+-- CREATE TABLE match_log (
+-- match_id               INT AUTO_INCREMENT PRIMARY KEY,
+-- company_member_id      INT NOT NULL,
+-- logistics_member_id    INT NOT NULL,
+-- matched_country_count  INT NOT NULL DEFAULT 0,
+-- matched_hscode_count   INT NOT NULL DEFAULT 0,
+-- country_trade_id       INT NOT NULL,
+-- match_status_update_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+-- match_status           INT NOT NULL,
+-- FOREIGN KEY (company_member_id) REFERENCES member(member_id),
+-- FOREIGN KEY (logistics_member_id) REFERENCES member(member_id),
+-- FOREIGN KEY (country_trade_id) REFERENCES trade_statistics(country_trade_id)
+-- );
 
 INSERT INTO match_log (match_id, company_member_id, logistics_member_id, matched_country_count, matched_hscode_count, country_trade_id, match_status_update_at, match_status) VALUES
 (1, 1, 3, 2, 2, 1, '2026-09-20 09:15:00', 2),
