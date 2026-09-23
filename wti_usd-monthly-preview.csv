@@ -1,0 +1,16 @@
+commodity_code,period,price,currency,unit,observation_type,source
+WTI_USD,2025-09-01T00:00:00.000Z,63.78,USD,barrel,monthly_average,aggregated
+WTI_USD,2025-10-01T00:00:00.000Z,60.2,USD,barrel,monthly_average,aggregated
+WTI_USD,2025-11-01T00:00:00.000Z,59.48,USD,barrel,monthly_average,aggregated
+WTI_USD,2025-12-01T00:00:00.000Z,58.03,USD,barrel,monthly_average,aggregated
+WTI_USD,2026-01-01T00:00:00.000Z,59.83,USD,barrel,monthly_average,aggregated
+WTI_USD,2026-02-01T00:00:00.000Z,64.37,USD,barrel,monthly_average,aggregated
+WTI_USD,2026-03-01T00:00:00.000Z,90.78,USD,barrel,monthly_average,aggregated
+WTI_USD,2026-04-01T00:00:00.000Z,98.71,USD,barrel,monthly_average,aggregated
+WTI_USD,2026-05-01T00:00:00.000Z,98.19,USD,barrel,monthly_average,aggregated
+WTI_USD,2026-06-01T00:00:00.000Z,81.73,USD,barrel,monthly_average,aggregated
+WTI_USD,2026-07-01T00:00:00.000Z,78.5,USD,barrel,monthly_average,aggregated
+WTI_USD,2026-08-01T00:00:00.000Z,82.1,USD,barrel,monthly_average,aggregated
+WTI_USD,2026-09-01T00:00:00.000Z,95.98,USD,barrel,monthly_average,aggregated
+,,,,,,
+,https://www.oilpriceapi.com/historical-prices,,,,,

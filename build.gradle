@@ -1,0 +1,56 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '4.1.1'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'main_project'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	
+//	1. springboot
+
+	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+
+//	2. myspl jdbc
+
+//	runtimeOnly 'com.mysql:mysql-connector-j'
+  	implementation 'com.mysql:mysql-connector-j'
+
+// 	3. Lombok
+
+	compileOnly 'org.projectlombok:lombok'
+  	annotationProcessor 'org.projectlombok:lombok'
+
+// 	4. JPA
+
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+//	5. HTTP 통신 - Spring Reactive Web
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+//	6. XML 파싱 - Jackson Dataformat XML
+	implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.22.2'
+
+// 	7. CSV 파싱 - OpenCSV
+	implementation 'com.opencsv:opencsv:5.12.0'
+
+
+
+
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
