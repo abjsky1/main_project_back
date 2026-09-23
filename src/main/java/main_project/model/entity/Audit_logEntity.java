@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 import lombok.Builder.Default;
 
 @Entity 
-@Table 
+@Table (name="audit_log")
 @Builder 
 @Data 
 @AllArgsConstructor 
