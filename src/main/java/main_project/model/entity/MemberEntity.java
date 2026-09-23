@@ -60,20 +60,20 @@ public class MemberEntity extends BaseTime {
     @Column ( name = "company_address" , nullable = false , length = 300 )
     private String company_address;
 
-    @CreationTimestamp 
-    @Column ( name = "created_at" , nullable = false , updatable = false)
-    private LocalDateTime created_at;
+    // @CreationTimestamp 
+    // @Column ( name = "created_at" , nullable = false , updatable = false)
+    // private LocalDateTime created_at;
 
-    @UpdateTimestamp 
-    @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-    private LocalDateTime update_at;
+    // @UpdateTimestamp 
+    // @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    // private LocalDateTime update_at;
 
     @ManyToOne ( fetch = FetchType.LAZY )
     @JoinColumn(name = "role_id", nullable = false)
     private Member_roleEntity member_roleEntity;
 
     @Builder.Default
-    @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    @Column(nullable = false, updatable = false )
     private Integer status = 1 ;
 
 

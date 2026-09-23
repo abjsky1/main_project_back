@@ -26,11 +26,12 @@ public class Trade_typeEntity extends BaseTime {
     @GeneratedValue ( strategy = GenerationType.IDENTITY )
     private Integer trade_id;
 
-    @Column ( nullable = false )
-    private Integer member_id;
+    @ManyToOne ( fetch = FetchType.LAZY )
+    @JoinColumn ( name = "member_id" , nullable = false )
+    private MemberEntity memberEntity;
     
     @Column  ( length = 15 , nullable = false)
-    private Integer hs_code;
+    private String hs_code;
 
     @Column  ( nullable = false )
     private Integer country_id;
@@ -38,9 +39,7 @@ public class Trade_typeEntity extends BaseTime {
     @Column  ( nullable =  false )
     private boolean matching_agree = false;
 
-    @ManyToOne ( fetch = FetchType.LAZY )
-    @JoinColumn ( name = "member_id" )
-    private MemberEntity memberEntity;
+    
 
 
 }

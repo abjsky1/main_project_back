@@ -29,12 +29,13 @@ public class Match_logEntity extends BaseTime {
     @GeneratedValue (strategy = GenerationType.IDENTITY)
     private Integer match_id;
 
-    @Column ( nullable = false)
-    private Integer company_member_id;
-    
-    
-    @Column ( nullable = false)
-    private Integer logistics_member_id;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_member_id", nullable = false)
+    private MemberEntity company_memberEntity;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "logistics_member_id", nullable = false)
+    private MemberEntity logistics_memberEntity;
 
     @Builder.Default
     @Column ( nullable = false)
@@ -45,27 +46,16 @@ public class Match_logEntity extends BaseTime {
     private Integer matched_hscode_count = 0;
 
     
-    @Column ( nullable = false)
-    private Integer country_trade_id;
-
+    @ManyToOne ( fetch = FetchType.LAZY)
+    @JoinColumn  ( name = "country_trade_id" , nullable = false ) 
+    private Trade_statisticsEntity Trade_statisticsEntity;
     
-    @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-    private LocalDateTime match_status_update_at;
+    // @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    // private LocalDateTime match_status_update_at;
 
     @Column ( nullable = false)
     private Integer match_status;
     
-    @ManyToOne  ( fetch = FetchType.LAZY)
-    @JoinColumn  ( name = "member_id") 
-    private MemberEntity company_memberEntity;
-
-    @ManyToOne ( fetch = FetchType.LAZY)
-    @JoinColumn  ( name = "member_id") 
-    private MemberEntity logistics_memberEntity;
-
-    @ManyToOne ( fetch = FetchType.LAZY)
-    @JoinColumn  ( name = "country_trade_id") 
-    private Trade_statisticsEntity Trade_statisticsEntity;
 
 
 }
