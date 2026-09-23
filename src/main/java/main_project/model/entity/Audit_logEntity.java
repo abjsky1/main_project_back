@@ -2,6 +2,8 @@ package main_project.model.entity;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.ColumnDefault;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -15,6 +17,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Builder.Default;
 
 @Entity 
 @Table 
@@ -22,14 +25,14 @@ import lombok.NoArgsConstructor;
 @Data 
 @AllArgsConstructor 
 @NoArgsConstructor 
-public class Audit_logEntity {
+public class Audit_logEntity extends BaseTime {
     
     @Id 
     @GeneratedValue (strategy = GenerationType.IDENTITY)
     private Integer audit_id;
 
-    @Column (nullable = false)
-    private LocalDateTime created_at = LocalDateTime.now();
+    @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    private LocalDateTime created_at;
 
     @Column (nullable = false)
     private Integer member_id;

@@ -23,7 +23,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Data 
 @Builder
-public class Match_logEntity {
+public class Match_logEntity extends BaseTime {
 
     @Id 
     @GeneratedValue (strategy = GenerationType.IDENTITY)
@@ -49,8 +49,8 @@ public class Match_logEntity {
     private Integer country_trade_id;
 
     
-    @Column ( nullable = false)
-    private LocalDateTime match_status_update_at = LocalDateTime.now();
+    @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    private LocalDateTime match_status_update_at;
 
     @Column ( nullable = false)
     private Integer match_status;
