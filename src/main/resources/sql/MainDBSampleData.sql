@@ -45,7 +45,7 @@ INSERT INTO member_type (signup_type_no, signup_type) VALUES
 -- FOREIGN KEY (role_id) REFERENCES member_role(role_id)
 -- );
 
-INSERT INTO member (member_id, signup_type_no, user_email, user_password, company_name, manager_name, department_name, business_reg_no, user_phone, company_address, created_at, update_at, role_id, status) VALUES
+INSERT INTO member (member_id, signup_type_no, user_email, user_password, company_name, manager_name, department_name, business_reg_no, user_phone, company_address, created_at, updated_at, role_id, status) VALUES
 (1, 101, 'abcde@naver.com', 'asd123', 'G-Trade', '이은경', '시스템운영팀', '111-11-11111', '010-1234-5678', '경기도 성남시 분당구 정자일로 95(정자동, 네이버 1784)', '2026-09-21 09:47:23', '2026-09-21 09:47:23', 2, 1),
 (2, 201, 'aa123@gmail.com', 'aaa000', '이노션', '조익현', '무역분석팀', '222-22-22222', '010-2244-8866', '서울특별시 강남구 강남대로 308(역삼동)', '2026-09-21 09:31:08', '2026-09-21 09:31:08', 1, 1),
 (3, 201, 'bb321@naver.com', '001235', '네모토코리아', '이민재', '파트너십팀', '333-33-33333', '010-1313-2424', '서울특별시 서초구 효령로 424, 403호(서초동, 대명빌딩)', '2026-09-21 09:22:45', '2026-09-21 09:22:45', 2, 1),
@@ -157,7 +157,7 @@ INSERT INTO trade_statistics (country_trade_id, trade_balance, export_amount, ex
 -- FOREIGN KEY (country_trade_id) REFERENCES trade_statistics(country_trade_id)
 -- );
 
-INSERT INTO match_log (match_id, company_member_id, logistics_member_id, matched_country_count, matched_hscode_count, country_trade_id, match_status_update_at, match_status) VALUES
+INSERT INTO match_log (match_id, company_member_id, logistics_member_id, matched_country_count, matched_hscode_count, country_trade_id, updated_at, match_status) VALUES
 (1, 1, 3, 2, 2, 1, '2026-09-20 09:15:00', 2),
 (2, 2, 1, 1, 1, 2, '2026-09-21 15:12:00', 1),
 (3, 3, 2, 1, 1, 3, '2026-09-22 14:30:00', 1),

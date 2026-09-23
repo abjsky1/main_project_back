@@ -1,37 +1,37 @@
-package main_project.model.dto;
+// package main_project.model.dto;
 
-import java.time.LocalDateTime;
+// import java.time.LocalDateTime;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import main_project.model.entity.SampleEntity;
+// import lombok.AllArgsConstructor;
+// import lombok.Builder;
+// import lombok.Data;
+// import lombok.NoArgsConstructor;
+// import main_project.model.entity.SampleEntity;
 
-@AllArgsConstructor 
-@NoArgsConstructor 
-@Data 
-@Builder 
-public class SampleDto {
+// @AllArgsConstructor 
+// @NoArgsConstructor 
+// @Data 
+// @Builder 
+// public class SampleDto {
 
-    private Integer sample1;
+//     private Integer sample1;
 
-    private String sample2;
+//     private String sample2;
 
-    private LocalDateTime createdAt;
+//     private LocalDateTime createdAt;
 
-    private LocalDateTime updatedAt;
+//     private LocalDateTime updatedAt;
 
-    public SampleEntity toEntity(){
+//     public SampleEntity toEntity(){
 
-        return SampleEntity.builder()
-            .build();
-    }
+//         return SampleEntity.builder()
+//             .build();
+//     }
 
-    public static SampleDto from(SampleEntity sampleEntity){
+//     public static SampleDto from(SampleEntity sampleEntity){
 
-        return SampleDto.builder()
-            .build();
-    }
+//         return SampleDto.builder()
+//             .build();
+//     }
     
-}
+// }
