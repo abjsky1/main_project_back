@@ -26,7 +26,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Data 
 @Builder
-public class MemberEntity {
+public class MemberEntity extends BaseTime {
 
     @Id 
     @GeneratedValue (strategy = GenerationType.IDENTITY)
@@ -65,7 +65,7 @@ public class MemberEntity {
     private LocalDateTime created_at;
 
     @UpdateTimestamp 
-    @Column ( name = "update_at")
+    @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime update_at;
 
     @ManyToOne ( fetch = FetchType.LAZY )
@@ -73,7 +73,7 @@ public class MemberEntity {
     private Member_roleEntity member_roleEntity;
 
     @Builder.Default
-    @Column ( name = "status" , nullable = false )
+    @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private Integer status = 1 ;
 
 

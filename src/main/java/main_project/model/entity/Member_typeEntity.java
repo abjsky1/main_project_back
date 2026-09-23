@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @Builder 
 @AllArgsConstructor 
 @NoArgsConstructor 
-public class Member_typeEntity {
+public class Member_typeEntity extends BaseTime {
 
     @Id 
     @GeneratedValue (strategy = GenerationType.IDENTITY)

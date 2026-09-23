@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Data 
 @Builder
-public class Trade_typeEntity {
+public class Trade_typeEntity extends BaseTime {
 
     @Id 
     @GeneratedValue ( strategy = GenerationType.IDENTITY )
