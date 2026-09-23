@@ -14,7 +14,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity 
-@Table (name = "sample")
+@Table (name = "trade_statistics")
 @AllArgsConstructor 
 @NoArgsConstructor
 @Data 
