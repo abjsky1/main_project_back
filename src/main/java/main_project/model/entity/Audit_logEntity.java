@@ -52,6 +52,6 @@ public class Audit_logEntity {
 
     @ManyToOne (fetch = FetchType.LAZY)
     @JoinColumn (name = "action_id")
-    private ActionEntity ActionEntity;
+    private ActionEntity actionEntity;
 
 }

@@ -2,7 +2,7 @@ package main_project.model.entity;
 
 import java.time.LocalDateTime;
 
-import org.hibernate.mapping.ManyToOne;
+import jakarta.persistence.ManyToOne;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -36,11 +36,11 @@ public class Match_logEntity {
     @Column ( nullable = false)
     private Integer logistics_member_id;
 
-    
+    @Builder.Default
     @Column ( nullable = false)
     private Integer matched_country_count = 0;
 
-    
+    @Builder.Default
     @Column ( nullable = false)
     private Integer matched_hscode_count = 0;
 
@@ -55,7 +55,7 @@ public class Match_logEntity {
     @Column ( nullable = false)
     private Integer match_status;
     
-    @ManyToOne ( fetch = FetchType.LAZY)
+    @ManyToOne  ( fetch = FetchType.LAZY)
     @JoinColumn  ( name = "member_id") 
     private MemberEntity company_memberEntity;
 

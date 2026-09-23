@@ -72,6 +72,7 @@ public class MemberEntity {
     @JoinColumn(name = "role_id", nullable = false)
     private Member_roleEntity member_roleEntity;
 
+    @Builder.Default
     @Column ( name = "status" , nullable = false )
     private Integer status = 1 ;
 

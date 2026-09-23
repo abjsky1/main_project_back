@@ -3,7 +3,7 @@
 CREATE TABLE member_role (
 role_id          INT AUTO_INCREMENT PRIMARY KEY,
 role_name        VARCHAR(20) NOT NULL UNIQUE,
-role_description VARCHAR(100) NULL
+role_description VARCHAR(100) NOT NULL
 );
 
 INSERT INTO member_role (role_id, role_name, role_description) VALUES
