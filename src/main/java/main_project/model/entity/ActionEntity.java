@@ -21,9 +21,9 @@ public class ActionEntity extends BaseTime {
 
     @Id 
     @GeneratedValue (strategy = GenerationType.IDENTITY)
-    private Integer action_id;
+    private Integer actionId;
 
     @Column (length = 50 , nullable = false)
-    private String action_type;
+    private String actionType;
     
 }

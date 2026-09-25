@@ -12,21 +12,21 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity 
-@Table (name = "member_role")
+@Table (name = "memberRole")
 @AllArgsConstructor 
 @NoArgsConstructor
 @Data 
 @Builder
-public class Member_roleEntity extends BaseTime {
+public class MemberRoleEntity extends BaseTime {
 
     @Id 
     @GeneratedValue (strategy = GenerationType.IDENTITY)
-    private Integer role_id;
+    private Integer roleId;
 
     @Column (length = 20 , nullable = false, unique = true)
-    private String role_name;
+    private String roleName;
     
     @Column  ( length = 100 , nullable = false)
-    private String role_description;
+    private String roleDescription;
     
 }
