@@ -1,11 +1,5 @@
 package main_project.model.entity;
 
-import java.time.LocalDateTime;
-import java.util.PrimitiveIterator;
-
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -30,47 +24,39 @@ public class MemberEntity extends BaseTime {
 
     @Id 
     @GeneratedValue (strategy = GenerationType.IDENTITY)
-    private Integer member_id;
+    private Integer memberId;
 
     @ManyToOne ( fetch = FetchType.LAZY )
-    @JoinColumn(name = "signup_type_no", nullable = false)
-    private Member_typeEntity member_typeEntity;
+    @JoinColumn(name = "signupTypeNo", nullable = false)
+    private MemberTypeEntity memberTypeEntity;
 
-    @Column (name = "user_email", nullable = false, unique = true, length = 100)
-    private String user_email;
+    @Column (name = "userEmail", nullable = false, unique = true, length = 100)
+    private String userEmail;
 
-    @Column ( name = "user_password" , nullable = false , length = 255 )
-    private String user_password;
+    @Column ( name = "userPassword" , nullable = false , length = 255 )
+    private String userPassword;
 
-    @Column ( name = "company_name" , nullable = false , length = 100 )
-    private String company_name;
+    @Column ( name = "companyName" , nullable = false , length = 100 )
+    private String companyName;
 
-    @Column ( name = "manager_name" , nullable = false , length = 50 )
-    private String manager_name;
+    @Column ( name = "managerName" , nullable = false , length = 50 )
+    private String managerName;
 
-    @Column ( name = "department_name" , length = 50 )
-    private String department_name;
+    @Column ( name = "departmentName" , length = 50 )
+    private String departmentName;
 
-    @Column ( name = "business_reg_no" , nullable = false , unique = true )
-    private String business_reg_no;
+    @Column ( name = "businessRegNo" , nullable = false , unique = true )
+    private String businessRegNo;
 
-    @Column ( name = "user_phone" , nullable = false , length = 20 )
-    private String user_phone;
+    @Column ( name = "userPhone" , nullable = false , length = 20 )
+    private String userPhone;
 
-    @Column ( name = "company_address" , nullable = false , length = 300 )
-    private String company_address;
-
-    // @CreationTimestamp 
-    // @Column ( name = "created_at" , nullable = false , updatable = false)
-    // private LocalDateTime created_at;
-
-    // @UpdateTimestamp 
-    // @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-    // private LocalDateTime update_at;
+    @Column ( name = "companyAddress" , nullable = false , length = 300 )
+    private String companyAddress;
 
     @ManyToOne ( fetch = FetchType.LAZY )
-    @JoinColumn(name = "role_id", nullable = false)
-    private Member_roleEntity member_roleEntity;
+    @JoinColumn(name = "roleId", nullable = false)
+    private MemberRoleEntity memberRoleEntity;
 
     @Builder.Default
     @Column(nullable = false, updatable = false )

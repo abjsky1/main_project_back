@@ -1,7 +1,5 @@
 package main_project.model.entity;
 
-import java.time.LocalDateTime;
-
 import jakarta.persistence.ManyToOne;
 
 import jakarta.persistence.Column;
@@ -18,43 +16,39 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity 
-@Table (name = "match_log")
+@Table (name = "matchLog")
 @AllArgsConstructor 
 @NoArgsConstructor
 @Data 
 @Builder
-public class Match_logEntity extends BaseTime {
+public class MatchLogEntity extends BaseTime {
 
     @Id 
     @GeneratedValue (strategy = GenerationType.IDENTITY)
-    private Integer match_id;
+    private Integer matchLogId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_member_id", nullable = false)
-    private MemberEntity company_memberEntity;
+    @JoinColumn(name = "companyMemberId", nullable = false)
+    private MemberEntity companyMemberEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "logistics_member_id", nullable = false)
-    private MemberEntity logistics_memberEntity;
+    @JoinColumn(name = "logisticsMemberId", nullable = false)
+    private MemberEntity logisticsMemberEntity;
 
     @Builder.Default
     @Column ( nullable = false)
-    private Integer matched_country_count = 0;
+    private Integer matchedCountryCount = 0;
 
     @Builder.Default
     @Column ( nullable = false)
-    private Integer matched_hscode_count = 0;
+    private Integer matchedHscodeCount = 0;
 
-    
-    @ManyToOne ( fetch = FetchType.LAZY)
-    @JoinColumn  ( name = "country_trade_id" , nullable = false ) 
-    private Trade_statisticsEntity Trade_statisticsEntity;
-    
-    // @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-    // private LocalDateTime match_status_update_at;
+    // @ManyToOne ( fetch = FetchType.LAZY)
+    // @JoinColumn  ( name = "countryTradeId" , nullable = false ) 
+    // private TradeStatisticsEntity TradeStatisticsEntity;
 
     @Column ( nullable = false)
-    private Integer match_status;
+    private Integer matchStatus;
     
 
 
