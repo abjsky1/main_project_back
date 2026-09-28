@@ -19,7 +19,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity 
+<<<<<<<<< Temporary merge branch 1
+@Table (name="audit_log")
+=========
 @Table ( name = "auditLog")
+>>>>>>>>> Temporary merge branch 2
 @Builder 
 @Data 
 @AllArgsConstructor 
