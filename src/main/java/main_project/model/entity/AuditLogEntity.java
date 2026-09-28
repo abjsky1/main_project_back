@@ -1,9 +1,5 @@
 package main_project.model.entity;
 
-import java.time.LocalDateTime;
-
-import org.hibernate.annotations.ColumnDefault;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -18,33 +14,34 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity 
-@Table ( name = "auditLog")
-@Builder 
-@Data 
-@AllArgsConstructor 
-@NoArgsConstructor 
+@Entity
+@Table(name = "audit_log")
+@Builder
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class AuditLogEntity extends BaseTime {
-    
-    @Id 
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "audit_id")
     private Integer auditId;
 
-    @ManyToOne (fetch = FetchType.LAZY)
-    @JoinColumn (name = "memberId" , nullable = false )
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", nullable = false)
     private MemberEntity memberEntity;
 
-    @ManyToOne (fetch = FetchType.LAZY)
-    @JoinColumn (name = "actionId" , nullable = false )
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "action_id", nullable = false)
     private ActionEntity actionEntity;
 
-    @Column ( name = "actionDetail" , length = 300, nullable = false)
+    @Column(name = "action_detail", length = 300, nullable = false)
     private String actionDetail;
 
-    @Column ( name = "fipAddress" , length = 45, nullable = false)
-    private String fip_Address;
+    @Column(name = "fip_address", length = 45, nullable = false)
+    private String fipAddress;
 
-    @Column ( name = "actionResult" , nullable = false)
+    @Column(name = "action_result", nullable = false)
     private Integer actionResult;
 
 }

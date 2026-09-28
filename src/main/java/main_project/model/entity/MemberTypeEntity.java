@@ -11,19 +11,20 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity 
-@Table (name="memberType")
-@Data 
-@Builder 
-@AllArgsConstructor 
-@NoArgsConstructor 
+@Entity
+@Table(name = "member_type")
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class MemberTypeEntity extends BaseTime {
 
-    @Id 
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "signup_type_no")
     private Integer signupTypeNo;
 
-    @Column(length = 20, nullable = false)
+    @Column(name = "signup_type", length = 20, nullable = false)
     private String signupType;
-
+    
 }
