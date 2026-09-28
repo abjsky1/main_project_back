@@ -11,19 +11,20 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity 
-@Table (name = "action")
-@AllArgsConstructor 
+@Entity
+@Table(name = "action")
+@AllArgsConstructor
 @NoArgsConstructor
-@Data 
+@Data
 @Builder
 public class ActionEntity extends BaseTime {
 
-    @Id 
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "action_id")
     private Integer actionId;
 
-    @Column (length = 50 , nullable = false)
+    @Column(name = "action_type", length = 50, nullable = false)
     private String actionType;
     
 }
