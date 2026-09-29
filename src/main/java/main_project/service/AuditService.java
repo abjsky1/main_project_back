@@ -3,18 +3,18 @@ package main_project.service;
 import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
-import main_project.model.repository.MatchLogRepository;
+import main_project.model.repository.AuditRepository;
 
 @Service 
 @RequiredArgsConstructor 
-public class MatchLogService {
+public class AuditService {
 
-    private final MatchLogRepository matchLogRepository;
+    private final AuditRepository auditRepository;
+
 
 
 
 
 
     
-
 }
