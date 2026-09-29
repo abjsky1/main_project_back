@@ -4,14 +4,16 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import main_project.model.repository.MemberTypeRepository;
+import main_project.model.repository.MatchingRepository;
+
 
 @Service 
 @RequiredArgsConstructor 
-@Transactional 
-public class MemberTypeService {
+public class MatchingService {
 
-    private final MemberTypeRepository memberTypeRepository;
+    private final MatchingRepository matchingRepository;
+
+
 
 
 

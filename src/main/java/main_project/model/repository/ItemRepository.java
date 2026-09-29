@@ -3,9 +3,9 @@ package main_project.model.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import main_project.model.entity.MemberTypeEntity;
+import main_project.model.entity.ItemEntity;
 
 @Repository 
-public interface MemberTypeRepository extends JpaRepository<MemberTypeEntity , Integer> {
+public interface ItemRepository extends JpaRepository <ItemEntity , Integer> {
 
 }

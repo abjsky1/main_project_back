@@ -4,14 +4,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
-import main_project.service.AuditLogService;
+import main_project.service.AuditService;
 
 @RestController 
 @RequestMapping ("")
 @RequiredArgsConstructor 
-public class AuditLogController {
+public class AuditController {
 
-    private final AuditLogService auditLogService;
+    private final AuditService auditService;
 
 
 
