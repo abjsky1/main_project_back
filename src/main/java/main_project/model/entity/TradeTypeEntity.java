@@ -15,31 +15,29 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity 
-@Table (name = "trade_type")
+@Table (name = "tradeType")
 @AllArgsConstructor 
 @NoArgsConstructor
 @Data 
 @Builder
-public class Trade_typeEntity extends BaseTime {
+public class TradeTypeEntity extends BaseTime {
 
     @Id 
     @GeneratedValue ( strategy = GenerationType.IDENTITY )
-    private Integer trade_id;
+    private Integer tradeId;
 
     @ManyToOne ( fetch = FetchType.LAZY )
-    @JoinColumn ( name = "member_id" , nullable = false )
+    @JoinColumn ( name = "memberId" , nullable = false )
     private MemberEntity memberEntity;
     
     @Column  ( length = 15 , nullable = false)
-    private String hs_code;
+    private String hsCode;
 
     @Column  ( nullable = false )
-    private Integer country_id;
+    private Integer countryId;
 
+    @Builder.Default
     @Column  ( nullable =  false )
-    private boolean matching_agree = false;
-
-    
-
+    private boolean matchingAgree = false;
 
 }

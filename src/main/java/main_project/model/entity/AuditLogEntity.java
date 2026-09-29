@@ -17,38 +17,34 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Builder.Default;
 
 @Entity 
-@Table ( name = "audit_log")
+@Table ( name = "auditLog")
 @Builder 
 @Data 
 @AllArgsConstructor 
 @NoArgsConstructor 
-public class Audit_logEntity extends BaseTime {
+public class AuditLogEntity extends BaseTime {
     
     @Id 
     @GeneratedValue (strategy = GenerationType.IDENTITY)
-    private Integer audit_id;
-
-    // @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-    // private LocalDateTime created_at;
+    private Integer auditId;
 
     @ManyToOne (fetch = FetchType.LAZY)
-    @JoinColumn (name = "member_id" , nullable = false )
+    @JoinColumn (name = "memberId" , nullable = false )
     private MemberEntity memberEntity;
 
     @ManyToOne (fetch = FetchType.LAZY)
-    @JoinColumn (name = "action_id" , nullable = false )
+    @JoinColumn (name = "actionId" , nullable = false )
     private ActionEntity actionEntity;
 
-    @Column ( name = "action_detail" , length = 300, nullable = false)
-    private String action_detail;
+    @Column ( name = "actionDetail" , length = 300, nullable = false)
+    private String actionDetail;
 
-    @Column ( name = "fip_address" , length = 45, nullable = false)
-    private String fip_address;
+    @Column ( name = "fipAddress" , length = 45, nullable = false)
+    private String fip_Address;
 
-    @Column ( name = "action_result" , nullable = false)
-    private Integer action_result;
+    @Column ( name = "actionResult" , nullable = false)
+    private Integer actionResult;
 
 }
