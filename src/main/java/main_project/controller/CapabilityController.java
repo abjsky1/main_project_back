@@ -4,16 +4,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
-import main_project.service.SampleService;
+import main_project.service.CapabilityService;
 
 @RestController 
+@RequestMapping ("")
 @RequiredArgsConstructor 
-@RequestMapping ("/api/sample")
-public class SampleController {
+public class CapabilityController {
 
-    private final SampleService sampleService;
-
-
-
+    private final CapabilityService capabilityService;
 
 }

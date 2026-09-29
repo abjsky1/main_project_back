@@ -4,18 +4,17 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-
-import main_project.model.repository.RoleRepository;
+import main_project.model.repository.ItemRepository;
 
 @Service 
 @RequiredArgsConstructor 
-public class TradeTypeService {
+@Transactional 
+public class ItemService {
 
-    private final RoleRepository roleRepository;
-
-
-
+    private final ItemRepository itemRepository;
 
 
 
+
+    
 }

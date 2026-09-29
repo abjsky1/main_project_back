@@ -8,7 +8,8 @@ import lombok.RequiredArgsConstructor;
 import main_project.model.repository.SignupRepository;
 
 @Service 
-@RequiredArgsConstructor 
+@RequiredArgsConstructor
+@Transactional 
 public class SignupService {
 
     private final SignupRepository signupRepository;
