@@ -29,27 +29,27 @@ public class MatchingEntity extends BaseTime {
     private MemberEntity logisticsMemberEntity;
 
     @Builder.Default
-    @Column(name = "route_score")
+    @Column(name = "route_score", nullable = false)
     private Integer routeScore = 0;
 
     @Builder.Default
-    @Column(name = "capacity_score")
+    @Column(name = "capacity_score", nullable = false)
     private Integer capacityScore = 0;
 
     @Builder.Default
-    @Column(name = "item_score")
+    @Column(name = "item_score", nullable = false)
     private Integer itemScore = 0;
 
     @Builder.Default
-    @Column(name = "schedule_score")
+    @Column(name = "schedule_score", nullable = false)
     private Integer scheduleScore = 0;
 
     @Builder.Default
-    @Column(name = "transport_score")
+    @Column(name = "transport_score", nullable = false)
     private Integer transportScore = 0;
 
     @Builder.Default
-    @Column(name = "total_score")
+    @Column(name = "total_score", nullable = false)
     private Integer totalScore = 0;
 
     @Column(name = "match_status", nullable = false)

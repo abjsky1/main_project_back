@@ -1,5 +1,8 @@
 package main_project.model.entity;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -38,32 +41,33 @@ public class RequestEntity extends BaseTime {
     @Column(name = "arrival", nullable = false, length = 100)
     private String arrival;
 
-    @Column(name = "request_weight", nullable = false, length = 50)
-    private String requestWeight;
+    @Column(name = "request_weight", nullable = false)
+    private Double requestWeight;
 
-    @Column(name = "desired_date", nullable = false, length = 50)
-    private String desiredDate;
+    @Column(name = "desired_date", nullable = false)
+    private LocalDate desiredDate;
 
     @Column(name = "cargo_type", nullable = false, length = 50)
     private String cargoType;
 
     @Builder.Default
-    @Column(name = "refrigerated")
+    @Column(name = "refrigerated", nullable = false)
     private Boolean refrigerated = false;
 
     @Builder.Default
-    @Column(name = "dangerous")
+    @Column(name = "dangerous", nullable = false)
     private Boolean dangerous = false;
 
     @Builder.Default
-    @Column(name = "heavy_cargo")
+    @Column(name = "heavy_cargo", nullable = false)
     private Boolean heavyCargo = false;
 
     @Builder.Default
-    @Column(name = "special_cargo")
+    @Column(name = "special_cargo", nullable = false)
     private Boolean specialCargo = false;
 
     @Builder.Default
-    @Column(name = "matching_agree")
+    @Column(name = "matching_agree", nullable = false)
     private Boolean matchingAgree = false;
+
 }

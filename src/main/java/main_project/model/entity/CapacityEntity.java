@@ -1,5 +1,7 @@
 package main_project.model.entity;
 
+import java.time.LocalDate;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,16 +26,16 @@ public class CapacityEntity extends BaseTime {
     @JoinColumn(name = "route_id", nullable = false)
     private RouteEntity routeEntity;
 
-    @Column(name = "available_date", nullable = false, length = 50)
-    private String availableDate;
+    @Column(name = "available_date", nullable = false)
+    private LocalDate availableDate;
 
-    @Column(name = "max_capacity", nullable = false, length = 50)
-    private String maxCapacity;
+    @Column(name = "max_capacity", nullable = false)
+    private Double maxCapacity;
 
     @Builder.Default
-    @Column(name = "reserved_capacity", length = 50)
-    private String reservedCapacity = "0";
+    @Column(name = "reserved_capacity", nullable = false)
+    private Double reservedCapacity = 0.0;
 
-    @Column(name = "available_capacity", nullable = false, length = 50)
-    private String availableCapacity;
+    @Column(name = "available_capacity", nullable = false)
+    private Double availableCapacity;
 }

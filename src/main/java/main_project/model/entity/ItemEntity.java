@@ -27,6 +27,6 @@ public class ItemEntity extends BaseTime {
     private String itemName;
 
     @Builder.Default
-    @Column(name = "experience_count")
+    @Column(name = "experience_count" , nullable = false )
     private Integer experienceCount = 0;
 }
