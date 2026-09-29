@@ -20,8 +20,8 @@ public class AuditEntity extends BaseTime {
     @JoinColumn(name = "member_id", nullable = false)
     private MemberEntity memberEntity;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "action_id")
+    @ManyToOne(fetch = FetchType.LAZY , optional = false)
+    @JoinColumn(name = "action_id" , nullable = false)
     private ActionEntity actionEntity;
 
     @Column(name = "action_detail", nullable = false, length = 300)

@@ -33,11 +33,11 @@ public class RouteEntity extends BaseTime {
     private String arrival;
 
     @Builder.Default
-    @Column(name = "regular_route")
+    @Column(name = "regular_route" , nullable = false)
     private Boolean regularRoute = true;
 
     @Builder.Default
-    @Column(name = "direct_route")
+    @Column(name = "direct_route" , nullable = false)
     private Boolean directRoute = true;
 
     @Column(name = "average_transit_days", nullable = false)
