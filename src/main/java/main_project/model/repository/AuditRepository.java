@@ -3,10 +3,9 @@ package main_project.model.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import main_project.model.entity.ActionEntity;
-
+import main_project.model.entity.AuditEntity;
 
 @Repository 
-public interface ActionRepository extends JpaRepository < ActionEntity , Integer > {
+public interface AuditRepository extends JpaRepository<AuditEntity,Integer>{
 
 }
