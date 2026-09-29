@@ -7,53 +7,47 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 @Entity
-@Table(name = "capability")
+@Table(name = "cscore3")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CapabilityEntity extends BaseTime {
+public class Cscore3Entity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "capability_id")
-    private Integer capabilityId;
+    @Column(name = "cscore3_id")
+    private Integer cscore3Id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "member_id", nullable = false)
-    private MemberEntity memberEntity;
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "cscore1_id", nullable = false)
+    private Cscore1Entity cscore1Entity;
 
     @Builder.Default
-    @Column(name = "general_container", nullable = false)
+    @Column(name = "general_container")
     private Boolean generalContainer = true;
 
     @Builder.Default
-    @Column(name = "refrigerated", nullable = false)
+    @Column(name = "refrigerated")
     private Boolean refrigerated = false;
 
     @Builder.Default
-    @Column(name = "dangerous", nullable = false)
+    @Column(name = "dangerous")
     private Boolean dangerous = false;
 
     @Builder.Default
-    @Column(name = "heavy_cargo", nullable = false)
+    @Column(name = "heavy_cargo")
     private Boolean heavyCargo = false;
 
     @Builder.Default
-    @Column(name = "special_cargo", nullable = false)
+    @Column(name = "special_cargo")
     private Boolean specialCargo = false;
-
-    @Builder.Default
-    @Column(name = "matching_agree", nullable = false)
-    private Boolean matchingAgree = true;
-    
 }

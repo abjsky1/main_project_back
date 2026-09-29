@@ -4,16 +4,18 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import main_project.model.repository.RouteRepository;
+import main_project.model.repository.Cscore1Repository;
 
 @Service 
 @RequiredArgsConstructor 
 @Transactional 
-public class RouteService {
+public class Cscore1Service {
 
-    private final RouteRepository routeRepository;
-
-
+    private final Cscore1Repository cscore1Repository;
 
 
+
+
+
+    
 }

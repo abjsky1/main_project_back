@@ -43,4 +43,5 @@ public class AuditEntity extends BaseTime {
 
     @Column(name = "action_result", nullable = false)
     private Integer actionResult;
+    
 }

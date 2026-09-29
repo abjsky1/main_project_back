@@ -4,13 +4,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
-import main_project.service.RequestService;
+import main_project.service.Cscore1Service;
 
 @RestController 
 @RequestMapping ("")
 @RequiredArgsConstructor 
-public class RequestController {
+public class Cscore1Controller {
 
-    private final RequestService requestService; 
+    private final Cscore1Service cscore1Service;
+
+
+
+
 
 }

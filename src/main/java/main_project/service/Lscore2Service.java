@@ -4,12 +4,17 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import main_project.model.repository.CapacityRepository;
+import main_project.model.repository.Lscore2epository;
 
 @Service 
 @RequiredArgsConstructor 
 @Transactional 
-public class CapacityService {
+public class Lscore2Service {
 
-    private final CapacityRepository capacityRepository;
+    private final Lscore2epository lscore2epository;
+
+
+
+
+    
 }

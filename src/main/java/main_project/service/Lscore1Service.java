@@ -4,16 +4,17 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import main_project.model.repository.RequestRepository;
+import main_project.model.repository.Lscore1Repository;
 
 @Service 
 @RequiredArgsConstructor 
 @Transactional 
-public class RequestService {
+public class Lscore1Service {
 
-    private final RequestRepository requestRepository;
+    private final Lscore1Repository lscore1Repository;
+
+
 
 
     
-
 }

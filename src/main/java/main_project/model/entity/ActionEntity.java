@@ -26,4 +26,5 @@ public class ActionEntity extends BaseTime {
 
     @Column(name = "action_type", nullable = false, length = 50)
     private String actionType;
+    
 }

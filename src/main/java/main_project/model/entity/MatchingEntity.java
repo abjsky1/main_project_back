@@ -14,7 +14,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
 @Entity
 @Table(name = "matching")
 @Data
@@ -29,39 +28,35 @@ public class MatchingEntity extends BaseTime {
     private Integer matchingId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "request_id", nullable = false)
-    private RequestEntity requestEntity;
+    @JoinColumn(name = "cscore1_id", nullable = false)
+    private Cscore1Entity cscore1Entity;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "company_member_id", nullable = false)
-    private MemberEntity companyMemberEntity;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "logistics_member_id", nullable = false)
-    private MemberEntity logisticsMemberEntity;
+    @JoinColumn(name = "lscore1_id", nullable = false)
+    private Lscore1Entity lscore1Entity;
 
     @Builder.Default
-    @Column(name = "route_score", nullable = false)
+    @Column(name = "route_score")
     private Integer routeScore = 0;
 
     @Builder.Default
-    @Column(name = "capacity_score", nullable = false)
+    @Column(name = "capacity_score")
     private Integer capacityScore = 0;
 
     @Builder.Default
-    @Column(name = "item_score", nullable = false)
+    @Column(name = "item_score")
     private Integer itemScore = 0;
 
     @Builder.Default
-    @Column(name = "schedule_score", nullable = false)
+    @Column(name = "schedule_score")
     private Integer scheduleScore = 0;
 
     @Builder.Default
-    @Column(name = "transport_score", nullable = false)
+    @Column(name = "transport_score")
     private Integer transportScore = 0;
 
     @Builder.Default
-    @Column(name = "total_score", nullable = false)
+    @Column(name = "total_score")
     private Integer totalScore = 0;
 
     @Column(name = "match_status", nullable = false)
@@ -72,4 +67,5 @@ public class MatchingEntity extends BaseTime {
 
     @Column(name = "warning_message", length = 300)
     private String warningMessage;
+    
 }

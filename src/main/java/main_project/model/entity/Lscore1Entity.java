@@ -14,25 +14,31 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity 
-@Table (name = "route")
-@Data 
-@Builder 
-@NoArgsConstructor 
-@AllArgsConstructor 
-public class RouteEntity extends BaseTime {
+@Entity
+@Table(name = "lscore1")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Lscore1Entity extends BaseTime {
 
-    @Id 
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
-    @Column (name = "route_id")
-    private Integer routeId;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "lscore1_id")
+    private Integer lscore1Id;
 
-    @ManyToOne (fetch = FetchType.LAZY, optional = false)
-    @JoinColumn (name = "member_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "member_id", nullable = false)
     private MemberEntity memberEntity;
 
     @Column(name = "country_id", nullable = false)
     private Integer countryId;
+
+    @Column(name = "hs_code", nullable = false, length = 15)
+    private String hsCode;
+
+    @Column(name = "trade_type", nullable = false, length = 20)
+    private String tradeType;
 
     @Column(name = "transport_type", nullable = false, length = 50)
     private String transportType;
@@ -44,13 +50,18 @@ public class RouteEntity extends BaseTime {
     private String arrival;
 
     @Builder.Default
-    @Column(name = "regular_route" , nullable = false)
+    @Column(name = "matching_agree")
+    private Boolean matchingAgree = false;
+
+    @Builder.Default
+    @Column(name = "experience_count")
+    private Integer experienceCount = 0;
+
+    @Builder.Default
+    @Column(name = "regular_route")
     private Boolean regularRoute = true;
 
     @Builder.Default
-    @Column(name = "direct_route" , nullable = false)
+    @Column(name = "direct_route")
     private Boolean directRoute = true;
-
-    @Column(name = "average_transit_days", nullable = false)
-    private Integer averageTransitDays;
 }
