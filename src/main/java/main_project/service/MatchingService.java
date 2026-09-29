@@ -4,14 +4,15 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import main_project.model.repository.MemberRoleRepository;
+import main_project.model.repository.MatchingRepository;
+
 
 @Service 
 @RequiredArgsConstructor 
-@Transactional 
-public class MemberRoleService {
+public class MatchingService {
 
-    private final MemberRoleRepository memberRoleRepository;
+    private final MatchingRepository matchingRepository;
+
 
 
 

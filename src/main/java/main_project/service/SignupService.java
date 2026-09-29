@@ -4,16 +4,14 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import main_project.model.repository.MatchLogRepository;
+
+import main_project.model.repository.SignupRepository;
 
 @Service 
 @RequiredArgsConstructor 
-@Transactional 
-public class MatchLogService {
+public class SignupService {
 
-    private final MatchLogRepository matchLogRepository;
-
-
+    private final SignupRepository signupRepository;
 
 
 
