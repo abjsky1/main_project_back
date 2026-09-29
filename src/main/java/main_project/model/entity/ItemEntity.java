@@ -23,6 +23,9 @@ public class ItemEntity extends BaseTime {
     @Column(name = "hs_code", nullable = false, length = 15)
     private String hsCode;
 
+    @Column(name = "item_name", nullable = false, length = 100)
+    private String itemName;
+
     @Builder.Default
     @Column(name = "experience_count")
     private Integer experienceCount = 0;
