@@ -67,7 +67,7 @@ public class ExchangeService {
             int year,
             Map<String, List<BigDecimal>> groups
     ) {
-        String fileName = "static/exchange_rate_" + year + ".csv";
+        String fileName = "static/exchange_rate/exchange_rate_" + year + ".csv";
         ClassPathResource resource = new ClassPathResource(fileName);
 
         try (PushbackReader reader = new PushbackReader(
