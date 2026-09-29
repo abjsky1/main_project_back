@@ -4,19 +4,12 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import main_project.model.repository.MatchingRepository;
+import main_project.model.repository.CapacityRepository;
 
 @Service 
 @RequiredArgsConstructor 
-@Transactional
-public class MatchingService {
+@Transactional 
+public class CapacityService {
 
-    private final MatchingRepository matchingRepository;
-
-
-
-
-
-
-
+    private final CapacityRepository capacityRepository;
 }
