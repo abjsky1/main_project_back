@@ -59,5 +59,5 @@ public class MemberEntity extends BaseTime {
 
     @Builder.Default
     @Column(name = "status", nullable = false)
-    private Integer status = 1;
+    private Boolean status = true;
 }

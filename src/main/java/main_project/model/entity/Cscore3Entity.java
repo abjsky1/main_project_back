@@ -32,22 +32,22 @@ public class Cscore3Entity {
     private Cscore1Entity cscore1Entity;
 
     @Builder.Default
-    @Column(name = "general_container")
+    @Column(name = "general_container" , nullable = false)
     private Boolean generalContainer = true;
 
     @Builder.Default
-    @Column(name = "refrigerated")
+    @Column(name = "refrigerated" , nullable = false)
     private Boolean refrigerated = false;
 
     @Builder.Default
-    @Column(name = "dangerous")
+    @Column(name = "dangerous" , nullable = false)
     private Boolean dangerous = false;
 
     @Builder.Default
-    @Column(name = "heavy_cargo")
+    @Column(name = "heavy_cargo" , nullable = false)
     private Boolean heavyCargo = false;
 
     @Builder.Default
-    @Column(name = "special_cargo")
+    @Column(name = "special_cargo" , nullable = false)
     private Boolean specialCargo = false;
 }

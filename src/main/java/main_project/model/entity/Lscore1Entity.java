@@ -38,10 +38,10 @@ public class Lscore1Entity extends BaseTime {
     private String hsCode;
 
     @Column(name = "trade_type", nullable = false)
-    private Integer tradeType;
+    private Boolean tradeType;
 
     @Column(name = "transport_type", nullable = false)
-    private Integer transportType;
+    private Boolean transportType;
 
     @Column(name = "departure", nullable = false)
     private Integer departure;
@@ -50,18 +50,18 @@ public class Lscore1Entity extends BaseTime {
     private Integer arrival;
 
     @Builder.Default
-    @Column(name = "matching_agree")
+    @Column(name = "matching_agree" , nullable = false)
     private Boolean matchingAgree = false;
 
     @Builder.Default
-    @Column(name = "experience_count")
+    @Column(name = "experience_count" , nullable = false)
     private Integer experienceCount = 0;
 
     @Builder.Default
-    @Column(name = "regular_route")
+    @Column(name = "regular_route" , nullable = false)
     private Boolean regularRoute = true;
 
     @Builder.Default
-    @Column(name = "direct_route")
+    @Column(name = "direct_route" , nullable = false)
     private Boolean directRoute = true;
 }

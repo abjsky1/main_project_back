@@ -38,10 +38,10 @@ public class Cscore1Entity extends BaseTime {
     private String hsCode;
 
     @Column(name = "trade_type", nullable = false)
-    private Integer tradeType;
+    private Boolean tradeType;
 
     @Column(name = "transport_type", nullable = false)
-    private Integer transportType;
+    private Boolean transportType;
 
     @Column(name = "departure", nullable = false)
     private Integer departure;
@@ -50,6 +50,6 @@ public class Cscore1Entity extends BaseTime {
     private Integer arrival;
 
     @Builder.Default
-    @Column(name = "matching_agree")
+    @Column(name = "matching_agree" , nullable = false)
     private Boolean matchingAgree = false;
 }

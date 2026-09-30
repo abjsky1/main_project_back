@@ -18,7 +18,7 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "lscore2")
 @Data
-@Builder
+@Builder 
 @NoArgsConstructor
 @AllArgsConstructor
 public class Lscore2Entity {

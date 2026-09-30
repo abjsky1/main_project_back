@@ -42,6 +42,6 @@ public class AuditEntity extends BaseTime {
     private String fipAddress;
 
     @Column(name = "action_result", nullable = false)
-    private Integer actionResult;
+    private Boolean actionResult;
     
 }

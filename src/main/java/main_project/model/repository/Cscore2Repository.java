@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 import main_project.model.entity.Cscore2Entity;
 
 @Repository 
-public interface Cscore2Repository extends JpaRepository<Cscore2Entity,Long>{
+public interface Cscore2Repository extends JpaRepository<Cscore2Entity,Integer>{
 
 }
