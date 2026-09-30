@@ -13,7 +13,6 @@ import main_project.model.dto.AuthorizationDto;
 import main_project.model.entity.AuditEntity;
 import main_project.model.entity.MemberEntity;
 import main_project.model.repository.AuditRepository;
-import main_project.model.repository.AuthorizationRepository;
 import main_project.model.repository.MemeberRepository;
 
 @Service 
@@ -29,16 +28,16 @@ public class AuthorizationService {
     public List<AuthorizationDto> AuthorizationFindAll(){
 
         // member 엔티티 전체 불러오기
-        List<MemberEntity> memberEntities = memeberRepository.findAll();
+        List memberEntities = memeberRepository.findAll();
 
         // Dto 로 변환해야 하니까 최종 반환할 Dto 리스트 생성
-        List<AuditEntity> authorizationDtos = new ArrayList<>();
+        List authorizationDtos = new ArrayList<>();
 
         // 전체 불러온 member 엔티티에서 하나씩 꺼내기
         memberEntities.forEach((memberEntity) -> {
             
             // 해당 회원의 최근 로그인(성공) 기록 찾기
-            Optional<MemberEntity> recentLoginLog = auditRepository.findTopByMemberEntityAndLoginSuccessOrderByCreatedAtDesc(memberEntity);
+            Optional recentLoginLog = auditRepository.findTopByMemberEntityAndLoginSuccessOrderByCreatedAtDesc(memberEntity);
             
             // 로그인 기록이 있으면 그 시간, 없으면 null을 반환
             LocalDateTime lastLoginTime = null;

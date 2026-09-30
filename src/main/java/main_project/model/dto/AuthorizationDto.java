@@ -33,13 +33,13 @@ public class AuthorizationDto {
     private LocalDateTime createdAt;
 
 //  [Entity -> DTO 변환] (마지막 로그인 시간을 추가 파라미터로 받음)
-    public static AuthorizationDto from(MemberEntity memberEntity, LocalDateTime lastLoginTime){
+    public static AuthorizationDto from(MemberEntity memberEntity, LocalDateTime createdAt){
         return AuthorizationDto.builder()
             .memberId(memberEntity.getMemberId())
             .userEmail(memberEntity.getUserEmail())
             .roleEntity(memberEntity.getRoleEntity())
             .status(memberEntity.getStatus())
-            .lastLoginTime(lastLoginTime) // 여기서 세팅
+            .createdAt(createdAt) // 여기서 세팅
             .build();
     }
 
