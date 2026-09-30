@@ -1099,8 +1099,8 @@ INSERT INTO lscore1 (lscore1_id, member_id, country_id, hs_code, trade_type, tra
 
 
 
--- 8-2. 물류업체 가용 일정 및 물량 (lsocer2) 1~50
-INSERT INTO lsocer2 (lsocer2_id, lscore1_id, max_capacity, available_capacity, available_date, average_transit_days) VALUES
+-- 8-2. 물류업체 가용 일정 및 물량 (lscore2) 1~50
+INSERT INTO lscore2 (lscore2_id, lscore1_id, max_capacity, available_capacity, available_date, average_transit_days) VALUES
 (1, 1, 33894.4, 2521.8, '2026-11-20', 21),
 (2, 2, 40381.8, 11340.5, '2026-12-07', 37),
 (3, 3, 22752.6, 12513.7, '2026-12-16', 36),
@@ -1152,8 +1152,8 @@ INSERT INTO lsocer2 (lsocer2_id, lscore1_id, max_capacity, available_capacity, a
 (49, 49, 11119.5, 4774.2, '2026-11-26', 22),
 (50, 50, 24599.5, 14902.9, '2027-02-19', 19);
 
--- 8-2. 물류업체 가용 일정 및 물량 (lsocer2) 51~100
-INSERT INTO lsocer2 (lsocer2_id, lscore1_id, max_capacity, available_capacity, available_date, average_transit_days) VALUES
+-- 8-2. 물류업체 가용 일정 및 물량 (lscore2) 51~100
+INSERT INTO lscore2 (lscore2_id, lscore1_id, max_capacity, available_capacity, available_date, average_transit_days) VALUES
 (51, 51, 44564.1, 3133.7, '2026-11-02', 8),
 (52, 52, 44955.0, 32533.9, '2027-01-25', 20),
 (53, 53, 27487.2, 16590.6, '2026-12-12', 43),

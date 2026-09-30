@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "lsocer2")
+@Table(name = "lscore2")
 @Data
 @Builder
 @NoArgsConstructor
@@ -25,8 +25,8 @@ public class Lscore2Entity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "lsocer2_id")
-    private Integer lsocer2Id;
+    @Column(name = "lscore2_id")
+    private Integer lscore2Id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "lscore1_id", nullable = false)
