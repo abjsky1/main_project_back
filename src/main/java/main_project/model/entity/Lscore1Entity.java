@@ -37,17 +37,17 @@ public class Lscore1Entity extends BaseTime {
     @Column(name = "hs_code", nullable = false, length = 15)
     private String hsCode;
 
-    @Column(name = "trade_type", nullable = false, length = 20)
-    private String tradeType;
+    @Column(name = "trade_type", nullable = false)
+    private Integer tradeType;
 
-    @Column(name = "transport_type", nullable = false, length = 50)
-    private String transportType;
+    @Column(name = "transport_type", nullable = false)
+    private Integer transportType;
 
-    @Column(name = "departure", nullable = false, length = 100)
-    private String departure;
+    @Column(name = "departure", nullable = false)
+    private Integer departure;
 
-    @Column(name = "arrival", nullable = false, length = 100)
-    private String arrival;
+    @Column(name = "arrival", nullable = false)
+    private Integer arrival;
 
     @Builder.Default
     @Column(name = "matching_agree")
