@@ -1,16 +1,12 @@
 package main_project.service;
 
-import java.io.BufferedWriter;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
+import java.io.BufferedReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
-import org.apache.poi.ss.usermodel.DataFormatter;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
 import main_project.model.dto.HscodeDto;
@@ -18,90 +14,57 @@ import main_project.model.dto.HscodeDto;
 @Service
 public class HscodeService {
 
-    // Excel -> CSV 변환
-    public boolean excelToCsv() {
+    // CSV 파일 경로
+    private final String csvFile = "src/main/resources/static/hscode/hscode.csv";
 
-        String excelFile =
-            "src/main/resources/static/hscode/hscode.xlsx";
 
-        String csvFile =
-            "src/main/resources/static/hscode/hscode.csv";
 
-        try (
-            FileInputStream fis =
-                new FileInputStream(excelFile);
 
-            Workbook workbook =
-                new XSSFWorkbook(fis);
+    // HS CODE 전체 조회
+    public List<HscodeDto> findAll() {
+        List<HscodeDto> list = new ArrayList<>();
+        try (BufferedReader br = Files.newBufferedReader(Path.of(csvFile),StandardCharsets.UTF_8))
+         {
 
-            BufferedWriter bw =
-                new BufferedWriter(
-                    new OutputStreamWriter(
-                        new FileOutputStream(csvFile),
-                        StandardCharsets.UTF_8
-                    )
-                )
-        ) {
+            String line;
 
-            Sheet sheet = workbook.getSheetAt(0);
+            // 첫 번째 줄 헤더 건너뛰기
+            br.readLine();
+            while ((line = br.readLine()) != null) {
 
-            DataFormatter formatter =
-                new DataFormatter();
+                String[] data = line.split(",", 2);
+                if (data.length < 2) {continue;}
 
-            // 한글 깨짐 방지용 BOM
-            bw.write("\uFEFF");
-
-            // CSV 헤더
-            bw.write("hscode_id,hscode_name");
-            bw.newLine();
-
-            for (Row row : sheet) {
-
-                String hscodeId =
-                    formatter
-                        .formatCellValue(row.getCell(0))
+                String hscodeId = data[0]
+                        .replace("\"", "")
+                        .replace("\uFEFF", "")
                         .trim();
 
-                String hscodeName =
-                    formatter
-                        .formatCellValue(row.getCell(1))
+                String hscodeName = data[1]
+                        .replace("\"", "")
                         .trim();
-
-                // 빈 행이면 건너뜀
-                if (hscodeId.isEmpty()) {
-                    continue;
-                }
-
-                HscodeDto dto =
-                    new HscodeDto(
+                HscodeDto dto = new HscodeDto(
                         hscodeId,
                         hscodeName
                     );
-
-                // CSV 내부 큰따옴표 처리
-                String name =
-                    dto.getHscode_name()
-                       .replace("\"", "\"\"");
-
-                bw.write(
-                    "\"" + dto.getHscode_id()
-                    + "\",\""
-                    + name
-                    + "\""
-                );
-
-                bw.newLine();
+                list.add(dto);
             }
 
-            System.out.println("CSV 변환 완료!");
-
-            return true;
-
         } catch (Exception e) {
-
             e.printStackTrace();
-
-            return false;
         }
+        return list;
+    }
+
+
+    // HS CODE 단건 조회
+    public HscodeDto findById(String hscodeId) {
+        List<HscodeDto> list = findAll();
+        for (HscodeDto dto : list) {
+        if (dto.getHscode_id().equals(hscodeId)) {
+                return dto;
+            }
+        }
+        return null;
     }
 }
