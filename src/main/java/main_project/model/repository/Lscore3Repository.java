@@ -14,6 +14,4 @@ public interface Lscore3Repository extends JpaRepository<Lscore3Entity,Integer>{
     // Lscore1에 연결된 Lscore3 조회
     Optional<Lscore3Entity> findByLscore1Entity(Lscore1Entity lscore1Entity);
     
-    // Lscore1에 연결된 Lscore3 삭제
-
 }
