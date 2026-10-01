@@ -7,8 +7,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import main_project.model.entity.MemberEntity;
-import main_project.model.entity.RoleEntity;
-import main_project.model.entity.SignupEntity;
 
 @AllArgsConstructor 
 @NoArgsConstructor 
@@ -19,38 +17,37 @@ public class AuthorizationDto {
 //  회원 번호
     private Integer memberId;
 
+//  회원 이름
+    private String managerName;
+
 //  회원 이메일
     private String userEmail;
 
 //  회원 권환
-    private RoleEntity roleEntity;
+    private String roleName;
 
 //  회원 상태
     @Builder.Default
     private Boolean status = true;
 
 //  최근 로그인 (감사로그에서 조회된 시간)
-    private LocalDateTime createdAt;
+    private LocalDateTime lastLoginAt;
 
-//  [Entity -> DTO 변환] (마지막 로그인 시간을 추가 파라미터로 받음)
-    public static AuthorizationDto from(MemberEntity memberEntity, LocalDateTime createdAt){
+
+//  조회 전용 DTO 라서 toEntity() 는 만들지 않음.
+//  (비밀번호, 사업자번호 등 필수값이 없어서 MemberEntity 를 만들 수도 없음)
+
+//  최근 로그인 시간은 MemberEntity 안에 없으니까 매개변수로 따로 받음
+    public static AuthorizationDto from(MemberEntity memberEntity , LocalDateTime lastLoginAt){
         return AuthorizationDto.builder()
             .memberId(memberEntity.getMemberId())
+            .managerName(memberEntity.getManagerName())
             .userEmail(memberEntity.getUserEmail())
-            .roleEntity(memberEntity.getRoleEntity())
+            .roleName(memberEntity.getRoleEntity().getRoleName())   // ※ RoleEntity 실제 필드명으로 바꿔줘
             .status(memberEntity.getStatus())
-            .createdAt(createdAt) // 여기서 세팅
+            .lastLoginAt(lastLoginAt)
             .build();
     }
 
-//  [DTO -> Entity 변환] (조회용 DTO라 실제론 잘 안 쓰이지만 구조 유지를 위해 작성)
-    public MemberEntity toEntity(){
-        return MemberEntity.builder()
-            .memberId(this.memberId)
-            .userEmail(this.userEmail)
-            .roleEntity(this.roleEntity)
-            .status(this.status)
-            .build();
-    }
 
 }
