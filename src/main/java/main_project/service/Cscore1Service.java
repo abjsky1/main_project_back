@@ -1,5 +1,8 @@
 package main_project.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
@@ -28,7 +31,7 @@ public class Cscore1Service {
 
     private final MemberRepository memberRepository;
 
-    // 화주 매칭 조건 등록
+    // [1] 화주 매칭 조건 등록
 
     @Transactional 
     public boolean cscoreWrite( 
@@ -76,12 +79,123 @@ public class Cscore1Service {
 
     }
 
-    
-    
+    // [2] Cscore1 전체 조회
+    public List<Cscore1Dto> cscoreRead(){
 
+        List<Cscore1Entity> cscore1Entities = cscore1Repository.findAll();
 
+        List<Cscore1Dto> cscore1Dtos = new ArrayList<>();
 
+        cscore1Entities.forEach((cscore1Entity) -> {
 
+            Cscore1Dto cscore1Dto = Cscore1Dto.from(cscore1Entity);
 
-    
+            cscore1Dtos.add(cscore1Dto);
+
+        });
+
+        return cscore1Dtos;
+
+    }
+
+    // [3] Cscore1 개별 조회
+    public Cscore1Dto cscoreFindByID( Integer cscore1Id ) {
+
+        Cscore1Entity cscore1Entity = cscore1Repository.findById(cscore1Id).orElse(null);
+
+        if (cscore1Entity == null) {
+
+            return null;
+            
+        }
+
+        return Cscore1Dto.from(cscore1Entity);
+
+    }
+
+    // [4] Cscore1에 연결된 Cscore2 조회
+    public Cscore2Dto cscore2Read( Integer cscore1Id ) {
+
+        Cscore1Entity cscore1Entity = cscore1Repository.findById(cscore1Id).orElse(null);
+
+        if (cscore1Entity == null) {
+
+            return null;
+
+        }
+
+        Cscore2Entity cscore2Entity = cscore2Repository.findByCscore1Entity(cscore1Entity).orElse(null);
+
+        if (cscore2Entity == null) {
+
+            return null;
+            
+        }
+
+        return Cscore2Dto.from(cscore2Entity);
+
+    }
+
+    // [5] Cscore1에 연결된 Cscore3 조회
+    public Cscore3Dto cscore3Read( Integer cscore1Id ) {
+
+        Cscore1Entity cscore1Entity = cscore1Repository.findById(cscore1Id).orElse(null);
+
+        if (cscore1Entity == null) {
+
+            return null;
+
+        }
+
+        Cscore3Entity cscore3Entity = cscore3Repository.findByCscore1Entity(cscore1Entity).orElse(null);
+
+        if (cscore3Entity == null) {
+
+            return null;
+            
+        }
+
+        return Cscore3Dto.from(cscore3Entity);
+
+    }
+
+    // [6] 화주 매칭 조건 삭제
+    @Transactional
+    public boolean cscoreDelete(Integer cscore1Id) {
+
+        // 1. Cscore1 조회
+        Cscore1Entity cscore1Entity = cscore1Repository.findById(cscore1Id).orElse(null);
+
+        if (cscore1Entity == null) {
+
+            return false;
+
+        }
+
+        // 2. 연결된 Cscore2 조회
+        Cscore2Entity cscore2Entity = cscore2Repository.findByCscore1Entity(cscore1Entity).orElse(null);
+
+        // 3. 연결된 Cscore3 조회
+        Cscore3Entity cscore3Entity =cscore3Repository.findByCscore1Entity(cscore1Entity).orElse(null);
+
+        // 4. Cscore2 삭제
+        if (cscore2Entity != null) {
+
+            cscore2Repository.deleteById(cscore2Entity.getCscore2Id());
+
+        }
+
+        // 5. Cscore3 삭제
+        if (cscore3Entity != null) {
+
+            cscore3Repository.deleteById(cscore3Entity.getCscore3Id());
+
+        }
+
+        // 6. Cscore1 삭제
+        cscore1Repository.deleteById(cscore1Id);
+
+        return true;
+    }
+
 }
