@@ -52,19 +52,22 @@ public class MatchingEntity extends BaseTime {
     private Integer scheduleScore = 0;
 
     @Builder.Default
-    @Column(name = "transport_score" , nullable = false)
-    private Integer transportScore = 0;
+    @Column(name = "experience_score" , nullable = false)
+    private Integer experienceScore = 0;
 
     @Builder.Default
     @Column(name = "total_score" , nullable = false)
     private Integer totalScore = 0;
 
+    @Builder.Default
     @Column(name = "match_status", nullable = false)
     private Boolean matchStatus = false;
 
+    @Builder.Default
     @Column(name = "recommend_reason", length = 300 , nullable = false)
     private String recommendReason = "-";
 
+    @Builder.Default
     @Column(name = "warning_message", length = 300 , nullable = false)
     private String warningMessage = "-";
     
