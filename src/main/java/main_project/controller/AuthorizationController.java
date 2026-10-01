@@ -17,12 +17,12 @@ public class AuthorizationController {
 
     private final AuthorizationService authorizationService;
 
-
+    
     //  사용자 권한 관리 사용자 목록 조회
     @GetMapping ("")
-    public List<AuthorizationDto> AuthorizationFindAll(){
+    public List<AuthorizationDto> findAll(){
 
-        return authorizationService.AuthorizationFindAll();
+        return authorizationService.findAll();
     }
 
 
