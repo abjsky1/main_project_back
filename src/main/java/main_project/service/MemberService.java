@@ -4,14 +4,15 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import main_project.model.repository.MemeberRepository;
+import main_project.model.repository.MemberRepository;
+
 
 @Service 
 @RequiredArgsConstructor 
 @Transactional 
 public class MemberService {
 
-    private final MemeberRepository memeberRepository;
+    private final MemberRepository memeberRepository;
 
 
 
