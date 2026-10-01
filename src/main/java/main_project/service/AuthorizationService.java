@@ -1,70 +1,52 @@
 package main_project.service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import main_project.model.dto.AuthorizationDto;
-import main_project.model.entity.AuditEntity;
 import main_project.model.entity.MemberEntity;
 import main_project.model.repository.AuditRepository;
-import main_project.model.repository.MemeberRepository;
+import main_project.model.repository.MemberRepository;
 
 @Service 
 @RequiredArgsConstructor 
 @Transactional 
 public class AuthorizationService {
 
-    private final MemeberRepository memeberRepository;
+    private final MemberRepository memberRepository;
 
     private final AuditRepository auditRepository;
 
-    // 사용자 권한 관리 사용자 목록 조회
-    public List<AuthorizationDto> AuthorizationFindAll(){
+//  사용자 권한 관리 사용자 목록 조회
+    @Transactional (readOnly = true)
+    public List<AuthorizationDto> findAll(){
 
-        // member 엔티티 전체 불러오기
-        List memberEntities = memeberRepository.findAll();
+    //  1. 회원 전체 조회 (역할까지 같이)                        → 쿼리 1번
+        List<MemberEntity> memberEntities = memberRepository.findAllWithRole();
 
-        // Dto 로 변환해야 하니까 최종 반환할 Dto 리스트 생성
-        List authorizationDtos = new ArrayList<>();
+    //  2. 회원별 최근 로그인 시간 조회                          → 쿼리 1번
+    //     { 회원번호 : 최근로그인시간 } 형태의 Map 으로 바꿔두면 회원번호로 바로 꺼낼 수 있음
+        Map<Integer, LocalDateTime> lastLoginMap = new HashMap<>();
 
-        // 전체 불러온 member 엔티티에서 하나씩 꺼내기
-        memberEntities.forEach((memberEntity) -> {
-            
-        // 해당 회원의 최근 로그인(성공) 기록 찾기
-        Optional recentLoginLog = auditRepository.findTopByMemberEntityAndLoginSuccessOrderByCreatedAtDesc(memberEntity);
-            
-        // 로그인 기록이 있으면 그 시간, 없으면 null을 반환
-        LocalDateTime lastLoginTime = null;
-        if(recentLoginLog.isPresent()){
-            lastLoginTime = recentLoginLog.get().getCreatedAt();
-        }
-
-        // 꺼낸 Entity와 조회한 마지막 로그인 시간을 넘겨 Dto로 변환
-        AuthorizationDto authorizationDto = AuthorizationDto.from(memberEntity, lastLoginTime);
-
-        // 변환한 Dto를 리스트에 집어넣기
-        authorizationDtos.add(authorizationDto);
+        auditRepository.findLastLoginList().forEach((lastLogin)->{
+            lastLoginMap.put(lastLogin.getMemberId(), lastLogin.getLastLoginAt());
         });
 
-        return authorizationDtos;
+    //  3. 회원 + 최근 로그인 시간 → DTO 로 변환
+        return memberEntities.stream().map((memberEntity)->{
 
+            LocalDateTime lastLoginAt = lastLoginMap.get(memberEntity.getMemberId());   // 로그인 기록이 없으면 null
+
+            return AuthorizationDto.from(memberEntity, lastLoginAt);
+
+        }).toList();
     }
-}
-
-
-
-
-
-
-
-
-
 
 
 }
