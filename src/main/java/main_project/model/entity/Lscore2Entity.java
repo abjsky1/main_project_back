@@ -32,9 +32,6 @@ public class Lscore2Entity {
     @JoinColumn(name = "lscore1_id", nullable = false)
     private Lscore1Entity lscore1Entity;
 
-    @Column(name = "max_capacity", nullable = false)
-    private Double maxCapacity;
-
     @Column(name = "available_capacity", nullable = false)
     private Double availableCapacity;
 
