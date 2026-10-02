@@ -32,7 +32,7 @@ public class AuthorizationService {
         List<MemberEntity> memberEntities = memberRepository.findAllWithRole();
 
     //  2. 회원별 최근 로그인 시간 조회                          → 쿼리 1번
-        Map<Integer, LocalDateTime> lastLoginMap = new HashMap<>();
+        Map<String, LocalDateTime> lastLoginMap = new HashMap<>();
 
         auditRepository.findLastLoginList().forEach((lastLogin)->{
             lastLoginMap.put(lastLogin.getMemberId(), lastLogin.getLastLoginAt());

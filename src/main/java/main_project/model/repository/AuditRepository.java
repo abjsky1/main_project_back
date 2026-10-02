@@ -18,7 +18,7 @@ public interface AuditRepository extends JpaRepository<AuditEntity,Integer>{
 //  → map.get("memberId") 처럼 문자열 키 + 형변환 할 필요 없이 getMemberId() 로 바로 꺼내 쓸 수 있음.
 //  (getter 이름은 아래 쿼리의 AS 별칭과 똑같아야 함 : memberId , lastLoginAt)
     interface LastLogin {
-        Integer getMemberId();
+        String getMemberId();
         LocalDateTime getLastLoginAt();
     }
 
@@ -39,5 +39,16 @@ public interface AuditRepository extends JpaRepository<AuditEntity,Integer>{
 
 //  @Query("SELECT member_id AS memberId, MAX(created_at) AS lastLoginAt FROM audit WHERE action_id = 2 AND action_result = true GROUP BY member_id", nativeQuery = true )
     List<LastLogin> findLastLoginList();
+
+//  감사 로그 목록 조회 (최신순) + 사용자 이름 , 작업 유형까지 한 번에
+//  memberEntity , actionEntity 둘 다 LAZY 라서 그냥 findAll() 하면
+//  getMemberEntity().getManagerName() 할 때마다 추가 쿼리가 나감 (N+1).
+//  JOIN FETCH 로 처음부터 같이 가져오면 쿼리 1번으로 끝.
+//  ORDER BY : 최신 로그가 위로 (같은 시간이면 나중에 저장된 번호가 위로)
+    @Query("SELECT a FROM AuditEntity a " +
+           "JOIN FETCH a.memberEntity " +
+           "JOIN FETCH a.actionEntity " +
+           "ORDER BY a.createdAt DESC, a.auditId DESC")
+    List<AuditEntity> findAllWithMemberAndAction();
 
 }
