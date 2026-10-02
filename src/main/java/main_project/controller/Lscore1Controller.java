@@ -26,7 +26,7 @@ public class Lscore1Controller {
 
 
     // [1] 물류업체 매칭 조건 등록
-    @PostMapping
+    @PostMapping("")
     public boolean lscoreWrite(@RequestBody LscoreRequestDto requestDto) {
 
         return lscore1Service.lscoreWrite(
@@ -38,7 +38,7 @@ public class Lscore1Controller {
 
 
     // [2] Lscore1 전체 조회
-    @GetMapping
+    @GetMapping("")
     public List<Lscore1Dto> lscoreRead() {
 
         return lscore1Service.lscoreRead();
