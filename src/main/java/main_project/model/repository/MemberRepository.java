@@ -11,7 +11,7 @@ import main_project.model.entity.MemberEntity;
 
 
 @Repository 
-public interface MemberRepository extends JpaRepository <MemberEntity , Integer> {
+public interface MemberRepository extends JpaRepository <MemberEntity , String> {
 
 
 //  회원 전체 조회 + 역할(role)까지 한 번에 조회

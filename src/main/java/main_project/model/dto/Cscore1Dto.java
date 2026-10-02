@@ -15,7 +15,7 @@ public class Cscore1Dto {
 
     private Integer cscore1Id;
 
-    private Integer memberId;
+    private String memberId;
 
     private Integer countryId;
 

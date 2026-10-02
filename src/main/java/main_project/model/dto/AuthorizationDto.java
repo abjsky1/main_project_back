@@ -15,7 +15,7 @@ import main_project.model.entity.MemberEntity;
 public class AuthorizationDto {
 
 //  회원 번호
-    private Integer memberId;
+    private String memberId;
 
 //  회원 이름
     private String managerName;

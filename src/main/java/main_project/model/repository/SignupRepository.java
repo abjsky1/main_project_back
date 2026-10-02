@@ -7,6 +7,6 @@ import main_project.model.entity.SignupEntity;
 
 
 @Repository 
-public interface SignupRepository extends JpaRepository<SignupEntity , Integer> {
+public interface SignupRepository extends JpaRepository<SignupEntity , String> {
 
 }
