@@ -12,14 +12,14 @@ import main_project.service.AuthorizationService;
 
 @RestController 
 @RequiredArgsConstructor 
-@RequestMapping ("/doodoo")
+@RequestMapping ("/macross/authorization")
 public class AuthorizationController {
 
     private final AuthorizationService authorizationService;
 
     
     //  사용자 권한 관리 사용자 목록 조회
-    @GetMapping ("")
+    @GetMapping ("find")
     public List<AuthorizationDto> findAll(){
 
         return authorizationService.findAll();
