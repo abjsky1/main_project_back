@@ -7,7 +7,8 @@ import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
+
+import main_project.model.dto.ExchangeDto;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -22,7 +23,7 @@ import com.opencsv.RFC4180ParserBuilder;
 @Service 
 public class ExchangeService {
 
-    public List<Map<String, Object>> month() {
+    public List<ExchangeDto> month() {
 
         // "2012-01/USD" → 해당 월·통화의 일별 환율 목록
         Map<String, List<BigDecimal>> groups = new TreeMap<>();
@@ -32,7 +33,7 @@ public class ExchangeService {
             readCsv(year, groups);
         }
 
-        List<Map<String, Object>> list = new ArrayList<>();
+        List<ExchangeDto> list = new ArrayList<>();
 
         // 월·통화별 평균 계산
         for (String key : groups.keySet()) {
@@ -46,16 +47,24 @@ public class ExchangeService {
 
             BigDecimal average = sum.divide(
                     BigDecimal.valueOf(rates.size()),
-                    4,
+                    3,
                     RoundingMode.HALF_UP
             );
 
             String[] parts = key.split("/", 2);
+            String currency = parts[1];
 
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("searchdate", parts[0]);
-            row.put("cur_unit", parts[1]);
-            row.put("deal_bas_r", average);
+            // IDR(100) 월 평균을 1통화 단위로 변환
+            if ("IDR(100)".equals(currency)) {
+                average = average.movePointLeft(2); // 100으로 나누기
+                currency = currency.replace("(100)", "");
+            }
+
+            ExchangeDto row = new ExchangeDto(
+                parts[0], // searchdate: 연월
+                currency, // cur_unit: 통화 코드
+                average   // deal_bas_r: 월 평균 환율
+            );
 
             list.add(row);
         }
