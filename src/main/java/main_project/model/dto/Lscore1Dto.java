@@ -15,7 +15,7 @@ public class Lscore1Dto {
 
     private Integer lscore1Id;
 
-    private Integer memberId;
+    private String memberId;
 
     private Integer countryId;
 
@@ -61,7 +61,7 @@ public class Lscore1Dto {
     // Entity -> DTO
     public static Lscore1Dto from(Lscore1Entity entity) {
 
-        return Lscore1Dto.builder()
+        return Lscore1Dto.builder() 
                 .lscore1Id(entity.getLscore1Id())
                 .memberId(entity.getMemberEntity().getMemberId())
                 .countryId(entity.getCountryId())

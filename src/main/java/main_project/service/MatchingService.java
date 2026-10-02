@@ -396,11 +396,5 @@ public class MatchingService {
 
     }
 
-    // [4] 최종 매칭 실행
-    @Transactional 
-    public boolean matchingWrite(Integer cscore1Id) {
-
-    
-    }
  
 }
