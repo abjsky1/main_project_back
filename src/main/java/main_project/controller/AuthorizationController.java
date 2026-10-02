@@ -7,20 +7,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.AuthorizationDto;
+import main_project.model.dto.AuthorizationCountDto;
 import main_project.service.AuthorizationService;
 
 @RestController 
 @RequiredArgsConstructor 
-@RequestMapping ("/doodoo")
+@RequestMapping ("/macross/authorization")
 public class AuthorizationController {
 
     private final AuthorizationService authorizationService;
 
-    
     //  사용자 권한 관리 사용자 목록 조회
-    @GetMapping ("")
-    public List<AuthorizationDto> findAll(){
+    @GetMapping ("find")
+    public AuthorizationCountDto findAll(){
 
         return authorizationService.findAll();
     }

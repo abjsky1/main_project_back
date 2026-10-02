@@ -34,6 +34,7 @@ public class AuthorizationDto {
     private LocalDateTime lastLoginAt;
 
 
+
 //  조회 전용 DTO 라서 toEntity() 는 만들지 않음.
 //  (비밀번호, 사업자번호 등 필수값이 없어서 MemberEntity 를 만들 수도 없음)
 
