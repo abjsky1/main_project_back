@@ -19,6 +19,7 @@ public class LoginController {
 
     @PostMapping
     public MemberEntity login(@RequestBody LoginDto loginDto) {
+        
         return loginService.login(loginDto);
     }
 }
