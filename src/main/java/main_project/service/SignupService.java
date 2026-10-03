@@ -2,6 +2,7 @@ package main_project.service;
 
 import java.util.UUID;
 
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
@@ -17,12 +18,19 @@ public class SignupService {
 
     private final MemberRepository memberRepository;
 
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     // 회원가입
     public boolean signup(MemberDto memberDto) {
 
     // memberDto 에 pk 값으로 UUID 를 넣어주기
     String pk = UUID.randomUUID().toString();
     memberDto.setMemberId(pk);
+
+    // 사용자가 입력한 평문 비밀번호를 BCrypt로 해서
+    String encodedPassword = passwordEncoder.encode(memberDto.getUserPassword());
+
+    // 암호화된 비밀번호 DTO에 다시 넣는다
+    memberDto.setUserPassword(encodedPassword);
 
     // UUID 가 추가된 memberDto 를 엔티티로 바꿔
     MemberEntity memberEntity = memberDto.toEntity();
