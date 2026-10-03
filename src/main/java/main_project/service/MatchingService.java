@@ -239,51 +239,69 @@ public class MatchingService {
 
     // 3. HS CODE 품목 적합도 점수 계산
     private Integer itemScore(
-        Cscore1Entity cscore1Entity ,
-        Lscore1Entity lscore1Entity) {
+            Cscore1Entity cscore1Entity,
+            Lscore1Entity lscore1Entity) {
 
-            // 수출입기업(화주) HS CODE에서 숫자만 남김
-            String cHsCode = cscore1Entity.getHsCode().replaceAll("[^0-9]", "");
+        // 화주 HS CODE 숫자만 남기기
+        String cHsCode =
+                cscore1Entity.getHsCode().replaceAll("[^0-9]", "");
 
-            // 물류기업 HS CODE에서 숫자만 남김
-            String lHsCode = lscore1Entity.getHsCode().replaceAll("[^0-9]", "");
+        // 물류업체 HS CODE 숫자만 남기기
+        String lHsCode =
+                lscore1Entity.getHsCode().replaceAll("[^0-9]", "");
 
-            // 10자리 전체 일치 : 20점
-            if (cHsCode.equals(lHsCode)) {
-                
-                return 20;
 
-            }
+        // 10자리 일치 : 20점
+        if (cHsCode.length() >= 10 &&
+            lHsCode.length() >= 10 &&
+            cHsCode.substring(0, 10).equals(lHsCode.substring(0, 10))) {
 
-            // 앞 8자리 일치 : 17점
-            if (cHsCode.substring(0, 8).equals(lHsCode.substring(0, 8))) {
+            return 20;
 
-                return 17;
-                
-            }
+        }
 
-            // 앞 6자리 일치 : 14점
-            if (cHsCode.substring(0, 6).equals(lHsCode.substring(0, 6))) {
-                
-                return 14;
 
-            }
+        // 앞 8자리 일치 : 17점
+        if (cHsCode.length() >= 8 &&
+            lHsCode.length() >= 8 &&
+            cHsCode.substring(0, 8).equals(lHsCode.substring(0, 8))) {
 
-            // 앞 4자리 일치 : 12점
-            if (cHsCode.substring(0, 4).equals(lHsCode.substring(0, 4))) {
+            return 17;
 
-                return 12;
-                
-            }
+        }
 
-            // 앞 2자리 일치 : 8점
-            if (cHsCode.substring(0, 2).equals(lHsCode.substring(0, 2))) {
-                
-                return 8;
 
-            }
+        // 앞 6자리 일치 : 14점
+        if (cHsCode.length() >= 6 &&
+            lHsCode.length() >= 6 &&
+            cHsCode.substring(0, 6).equals(lHsCode.substring(0, 6))) {
 
-        // 無일치 : 0점
+            return 14;
+
+        }
+
+
+        // 앞 4자리 일치 : 12점
+        if (cHsCode.length() >= 4 &&
+            lHsCode.length() >= 4 &&
+            cHsCode.substring(0, 4).equals(lHsCode.substring(0, 4))) {
+
+            return 12;
+
+        }
+
+
+        // 앞 2자리 일치 : 8점
+        if (cHsCode.length() >= 2 &&
+            lHsCode.length() >= 2 &&
+            cHsCode.substring(0, 2).equals(lHsCode.substring(0, 2))) {
+
+            return 8;
+
+        }
+
+
+        // 일치하지 않음
         return 0;
 
     }
