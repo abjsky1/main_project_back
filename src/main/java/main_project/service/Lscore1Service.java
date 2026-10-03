@@ -92,11 +92,13 @@ public class Lscore1Service {
     }
 
 
-    // [2] Lscore1 전체 조회
-    public List<Lscore1Dto> lscoreRead() {
+    // [2] Lscore1 조회
+    public List<Lscore1Dto> lscoreRead(String memberId) {
 
-        // 1. 등록된 모든 물류업체 기본 매칭 조건 조회
-        List<Lscore1Entity> lscore1Entities = lscore1Repository.findAll();
+        // 1. 회원 ID가 있으면 해당 회원의 조건만 조회
+        List<Lscore1Entity> lscore1Entities = memberId == null
+                ? lscore1Repository.findAll()
+                : lscore1Repository.findByMemberEntityMemberId(memberId);
 
         // 2. Entity를 DTO로 변환해서 담을 리스트 생성
         List<Lscore1Dto> lscore1Dtos = new ArrayList<>();

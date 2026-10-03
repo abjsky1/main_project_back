@@ -29,7 +29,8 @@ public class LoginService {
 
        if(passwordMatch == false) { return null;}
 
-       if(!memberEntity.getUserPassword().equals(loginDto.getUserPassword())) { return null;}
+       // BCrypt 적용으로 기존 평문 비밀번호 equals 비교 제거
+       // if(!memberEntity.getUserPassword().equals(loginDto.getUserPassword())) { return null;}
 
        if (memberEntity.getStatus() == false) { return null;}
         return memberEntity;

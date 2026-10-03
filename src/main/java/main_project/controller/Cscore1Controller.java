@@ -3,6 +3,7 @@ package main_project.controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
@@ -41,11 +42,12 @@ public class Cscore1Controller {
 
     }
 
-    // [2] Cscore1 전체조회
+    // [2] 회원 조회 (memberId 생략 시 전체 조회)
     @GetMapping("")
-    public List<Cscore1Dto> cscoreRead(){
+    public List<Cscore1Dto> cscoreRead(
+            @RequestParam(name = "memberId", required = false) String memberId) {
 
-        return cscore1Service.cscoreRead();
+        return cscore1Service.cscoreRead(memberId);
 
     }
 

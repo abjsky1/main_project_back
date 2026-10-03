@@ -94,10 +94,13 @@ public class Cscore1Service {
     }
 
     // [2] Cscore1 전체 조회
-    public List<Cscore1Dto> cscoreRead(){
+    public List<Cscore1Dto> cscoreRead(String memberId){
 
         // 1. Cscore1 테이블에 등록된 모든 데이터를 조회
-        List<Cscore1Entity> cscore1Entities = cscore1Repository.findAll();
+        // 1. 회원 ID가 있으면 해당 회원의 조건만 조회
+        List<Cscore1Entity> cscore1Entities = memberId == null
+                ? cscore1Repository.findAll()
+                : cscore1Repository.findByMemberEntityMemberId(memberId);
 
         // 2. 조회한 Entity를 DTO로 변환해서 담을 새로운 List를 생성
         List<Cscore1Dto> cscore1Dtos = new ArrayList<>();

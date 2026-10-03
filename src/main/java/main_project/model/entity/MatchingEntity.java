@@ -59,9 +59,25 @@ public class MatchingEntity extends BaseTime {
     @Column(name = "total_score" , nullable = false)
     private Integer totalScore = 0;
 
+    // 관리자 검토 상태 (pending : 대기중)
     @Builder.Default
-    @Column(name = "match_status", nullable = false)
-    private Boolean matchStatus = false;
+    @Column(name = "admin_status", nullable = false, length = 20)
+    private String adminStatus = "PENDING";
+
+    // 수출입기업 응답 상태
+    @Builder.Default
+    @Column(name = "shipper_status", nullable = false, length = 20)
+    private String shipperStatus = "WAITING";
+
+    // 물류기업 응답 상태
+    @Builder.Default
+    @Column(name = "logistics_status", nullable = false, length = 20)
+    private String logisticsStatus = "WAITING";
+
+    // 최종 매칭 상태
+    @Builder.Default
+    @Column(name = "final_status", nullable = false, length = 20)
+    private String finalStatus = "PENDING";
 
     @Builder.Default
     @Column(name = "recommend_reason", length = 300 , nullable = false)

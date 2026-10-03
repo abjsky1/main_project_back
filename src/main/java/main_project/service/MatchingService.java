@@ -1,11 +1,13 @@
 package main_project.service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import main_project.model.dto.MatchingDto;
 import main_project.model.entity.Cscore1Entity;
 import main_project.model.entity.Cscore2Entity;
 import main_project.model.entity.Cscore3Entity;
@@ -581,5 +583,70 @@ public class MatchingService {
         return false;
 
     }
+
+    // [5] 매칭 결과 전체 조회
+    public List<MatchingDto> matchingRead() {
+
+        // 1. matching 테이블 전체 조회
+        List<MatchingEntity> matchingEntities =
+                matchingRepository.findAll();
+
+        // 2. 반환할 DTO 리스트 생성
+        List<MatchingDto> matchingDtos = new ArrayList<>();
+
+        // 3. 조회한 Entity를 하나씩 DTO로 변환
+        for (MatchingEntity matchingEntity : matchingEntities) {
+
+            MatchingDto matchingDto = MatchingDto.builder()
+
+                // 매칭 PK
+                .matchingId(matchingEntity.getMatchingId())
+
+                // 수출입기업 조건 PK
+                .cscore1Id(matchingEntity.getCscore1Entity().getCscore1Id())
+
+                // 물류기업 조건 PK
+                .lscore1Id(matchingEntity.getLscore1Entity().getLscore1Id())
+
+                // 점수
+                .routeScore(matchingEntity.getRouteScore())
+
+                .capacityScore(matchingEntity.getCapacityScore())
+
+                .itemScore(matchingEntity.getItemScore())
+
+                .scheduleScore(matchingEntity.getScheduleScore())
+
+                .experienceScore(matchingEntity.getExperienceScore())
+
+                .totalScore(matchingEntity.getTotalScore())
+
+                // 상태
+                .adminStatus(matchingEntity.getAdminStatus())
+
+                .shipperStatus(matchingEntity.getShipperStatus())
+
+                .logisticsStatus(matchingEntity.getLogisticsStatus())
+
+                .finalStatus(matchingEntity.getFinalStatus())
+
+                // 추천 이유 / 경고 메시지
+                .recommendReason(matchingEntity.getRecommendReason())
+
+                .warningMessage(matchingEntity.getWarningMessage())
+
+                .createdAt(matchingEntity.getCreatedAt())
+                
+                .build();
+
+                // 4. 리스트에 DTO 추가
+                matchingDtos.add(matchingDto);
+
+            }
+
+            // 5. 매칭 결과 반환
+            return matchingDtos;
+            
+        }
 
 }
