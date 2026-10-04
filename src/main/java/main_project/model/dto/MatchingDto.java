@@ -22,6 +22,29 @@ public class MatchingDto {
     // 물류기업 조건 PK
     private Integer lscore1Id;
 
+    // 수출입기업 정보
+    private String shipperCompanyName;
+
+    private String shipperContactName;
+
+    private String shipperBizNumber;
+
+    private String shipperPhone;
+
+    private String shipperAddress;
+
+
+    // 물류기업 정보
+    private String logisticsCompanyName;
+
+    private String logisticsContactName;
+
+    private String logisticsBizNumber;
+
+    private String logisticsPhone;
+    
+    private String logisticsAddress;
+
     // 매칭 점수
     private Integer routeScore;
 

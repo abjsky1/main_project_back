@@ -608,6 +608,79 @@ public class MatchingService {
                 // 물류기업 조건 PK
                 .lscore1Id(matchingEntity.getLscore1Entity().getLscore1Id())
 
+                // 수출입기업 정보
+                .shipperCompanyName(
+                    matchingEntity
+                        .getCscore1Entity()
+                        .getMemberEntity()
+                        .getCompanyName()
+                )
+
+                .shipperContactName(
+                    matchingEntity
+                        .getCscore1Entity()
+                        .getMemberEntity()
+                        .getManagerName()
+                )
+
+                .shipperBizNumber(
+                    matchingEntity
+                        .getCscore1Entity()
+                        .getMemberEntity()
+                        .getBusinessRegNo()
+                )
+
+                .shipperPhone(
+                    matchingEntity
+                        .getCscore1Entity()
+                        .getMemberEntity()
+                        .getUserPhone()
+                )
+
+                .shipperAddress(
+                    matchingEntity
+                        .getCscore1Entity()
+                        .getMemberEntity()
+                        .getCompanyAddress()
+                )
+
+
+                // 물류기업 정보
+                .logisticsCompanyName(
+                    matchingEntity
+                        .getLscore1Entity()
+                        .getMemberEntity()
+                        .getCompanyName()
+                )
+
+                .logisticsContactName(
+                    matchingEntity
+                        .getLscore1Entity()
+                        .getMemberEntity()
+                        .getManagerName()
+                )
+
+                .logisticsBizNumber(
+                    matchingEntity
+                        .getLscore1Entity()
+                        .getMemberEntity()
+                        .getBusinessRegNo()
+                )
+
+                .logisticsPhone(
+                    matchingEntity
+                        .getLscore1Entity()
+                        .getMemberEntity()
+                        .getUserPhone()
+                )
+
+                .logisticsAddress(
+                    matchingEntity
+                        .getLscore1Entity()
+                        .getMemberEntity()
+                        .getCompanyAddress()
+                )
+
                 // 점수
                 .routeScore(matchingEntity.getRouteScore())
 
@@ -648,5 +721,348 @@ public class MatchingService {
             return matchingDtos;
             
         }
+
+    // [6] 관리자 매칭 승인
+    public boolean matchingApprove( Integer matchingId ) {
+
+        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
+
+        if (matchingEntity == null) {
+                
+            return false;
+
+        }
+
+        matchingEntity.setAdminStatus("APPROVED");
+
+        matchingRepository.save(matchingEntity);
+
+        return true;
+
+    }
+
+    // [7] 관리자 매칭 반려
+    public boolean matchingReject( Integer matchingId ) {
+
+        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
+
+        if (matchingEntity == null) {
+                
+            return false;
+
+        }
+
+        // 관리자 단계에서 반려되면 매칭 종료
+        matchingEntity.setAdminStatus("REJECTED");
+
+        matchingEntity.setFinalStatus("FAILED");
+        
+        matchingRepository.save(matchingEntity);
+
+        return true;
+
+    }
+
+    // [8] 회원별 승인된 매칭 조회
+    public List<MatchingDto> matchingMemberRead(String memberId) {
+
+        // 1. matching 테이블 전체 조회
+        List<MatchingEntity> matchingEntities = matchingRepository.findAll();
+
+        // 2. DTO 리스트 반환
+        List<MatchingDto> matchingDtos = new ArrayList<>();
+
+        // 3. 매칭 결과 하나씩 확인
+        for (MatchingEntity matchingEntity : matchingEntities) {
+
+            // 관리자가 승인한 매칭만 회원에게 보여줌
+            if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
+                
+                continue;
+
+            }
+
+            // 4. 매칭된 수출입기업 member_id
+            String shipperMemberId = matchingEntity
+                                    .getCscore1Entity()
+                                    .getMemberEntity()
+                                    .getMemberId();
+            
+            // 5. 매칭된 물류기업 member_id
+            String logisticMemberId = matchingEntity
+                                    .getLscore1Entity()
+                                    .getMemberEntity()
+                                    .getMemberId();
+
+            // 6. 로그인한 회원이 매칭 당사자 아니면 다음 매칭
+            if (!shipperMemberId.equals(memberId) 
+                && !logisticMemberId.equals(memberId)) {
+
+                continue;
+                
+            }
+
+            // 7. Entity -> DTO
+            MatchingDto matchingDto = MatchingDto.builder()
+                                    .matchingId(matchingEntity.getMatchingId())
+                                    .cscore1Id(
+                                    matchingEntity
+                                        .getCscore1Entity()
+                                        .getCscore1Id()
+                                    )
+
+                                    .lscore1Id(
+                                    matchingEntity
+                                        .getLscore1Entity()
+                                        .getLscore1Id()
+                                    )
+
+
+                                    // 수출입기업 정보
+                                    .shipperCompanyName(
+                                        matchingEntity
+                                            .getCscore1Entity()
+                                            .getMemberEntity()
+                                            .getCompanyName()
+                                    )
+
+                                    .shipperContactName(
+                                        matchingEntity
+                                            .getCscore1Entity()
+                                            .getMemberEntity()
+                                            .getManagerName()
+                                    )
+
+                                    .shipperBizNumber(
+                                        matchingEntity
+                                            .getCscore1Entity()
+                                            .getMemberEntity()
+                                            .getBusinessRegNo()
+                                    )
+
+                                    .shipperPhone(
+                                        matchingEntity
+                                            .getCscore1Entity()
+                                            .getMemberEntity()
+                                            .getUserPhone()
+                                    )
+
+                                    .shipperAddress(
+                                        matchingEntity
+                                            .getCscore1Entity()
+                                            .getMemberEntity()
+                                            .getCompanyAddress()
+                                    )
+
+
+                                    // 물류기업 정보
+                                    .logisticsCompanyName(
+                                        matchingEntity
+                                            .getLscore1Entity()
+                                            .getMemberEntity()
+                                            .getCompanyName()
+                                    )
+
+                                    .logisticsContactName(
+                                        matchingEntity
+                                            .getLscore1Entity()
+                                            .getMemberEntity()
+                                            .getManagerName()
+                                    )
+
+                                    .logisticsBizNumber(
+                                        matchingEntity
+                                            .getLscore1Entity()
+                                            .getMemberEntity()
+                                            .getBusinessRegNo()
+                                    )
+
+                                    .logisticsPhone(
+                                        matchingEntity
+                                            .getLscore1Entity()
+                                            .getMemberEntity()
+                                            .getUserPhone()
+                                    )
+
+                                    .logisticsAddress(
+                                        matchingEntity
+                                            .getLscore1Entity()
+                                            .getMemberEntity()
+                                            .getCompanyAddress()
+                                    )
+
+
+                                    // 점수
+                                    .routeScore(matchingEntity.getRouteScore())
+                                    .capacityScore(matchingEntity.getCapacityScore())
+                                    .itemScore(matchingEntity.getItemScore())
+                                    .scheduleScore(matchingEntity.getScheduleScore())
+                                    .experienceScore(matchingEntity.getExperienceScore())
+                                    .totalScore(matchingEntity.getTotalScore())
+
+
+                                    // 상태
+                                    .adminStatus(matchingEntity.getAdminStatus())
+                                    .shipperStatus(matchingEntity.getShipperStatus())
+                                    .logisticsStatus(matchingEntity.getLogisticsStatus())
+                                    .finalStatus(matchingEntity.getFinalStatus())
+
+
+                                    .recommendReason(matchingEntity.getRecommendReason())
+                                    .warningMessage(matchingEntity.getWarningMessage())
+
+                                    .createdAt(matchingEntity.getCreatedAt())
+
+                                    .build();
+
+            matchingDtos.add(matchingDto);
+
+        }
+
+        return matchingDtos;
+
+    }
+
+    // [9] 수출입 기업 매칭 수락
+    public boolean shipperAccept(Integer matchingId) {
+
+        // 1. 매칭 조회
+        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
+
+        // 2. 매칭 없으면 실패
+        if (matchingEntity == null) {
+            
+            return false;
+
+        }
+
+        // 3. 관리자가 승인한 매칭만 수락 가능
+        if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
+
+            return false;
+
+        }
+
+        // 4. 이미 종료된 매칭이면 처리하지 않음
+        if (!matchingEntity.getFinalStatus().equals("PENDING")) {
+
+            return false;
+            
+        }
+
+        // 5. 수출입기업 수락
+        matchingEntity.setShipperStatus("ACCEPTED");
+
+        // 6. 물류기업 이미 수락했다면 최종 성사
+        if (matchingEntity.getLogisticsStatus().equals("ACCEPTED")) {
+
+            matchingEntity.setFinalStatus("COMPLETED");
+            
+        }
+
+        // 7. 저장
+        matchingRepository.save(matchingEntity);
+
+        return true;
+
+    }
+
+    // [10] 수출입기업 매칭 거절
+    public boolean shipperReject(Integer matchingId) {
+
+        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
+
+        if (matchingEntity == null) {
+
+            return false;
+
+        }
+
+        // 관리자 승인된 매칭만 응답 가능
+        if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
+
+            return false;
+
+        }
+
+        // 이미 종료된 매칭이면 처리하지 않음
+        if (!matchingEntity.getFinalStatus().equals("PENDING")) {
+
+            return false;
+
+        }
+
+        // 수출입기업 거절
+        matchingEntity.setShipperStatus("REJECTED");
+
+        // 한쪽이라도 거절하면 최종 실패
+        matchingEntity.setFinalStatus("FAILED");
+
+        matchingRepository.save(matchingEntity);
+
+        return true;
+
+    }
+
+    // [11] 물류기업 매칭 수락
+    public boolean logisticsAccept(Integer matchingId) {
+
+        MatchingEntity matchingEntity =
+                matchingRepository.findById(matchingId).orElse(null);
+
+        if (matchingEntity == null) {
+            return false;
+        }
+
+        if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
+            return false;
+        }
+
+        if (!matchingEntity.getFinalStatus().equals("PENDING")) {
+            return false;
+        }
+
+        // 물류기업 수락
+        matchingEntity.setLogisticsStatus("ACCEPTED");
+
+        // 수출입기업도 이미 수락했다면 최종 성사
+        if (matchingEntity.getShipperStatus().equals("ACCEPTED")) {
+            matchingEntity.setFinalStatus("COMPLETED");
+        }
+
+        matchingRepository.save(matchingEntity);
+
+        return true;
+    }
+
+
+    // [12] 물류기업 매칭 거절
+    public boolean logisticsReject(Integer matchingId) {
+
+        MatchingEntity matchingEntity =
+                matchingRepository.findById(matchingId).orElse(null);
+
+        if (matchingEntity == null) {
+            return false;
+        }
+
+        if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
+            return false;
+        }
+
+        if (!matchingEntity.getFinalStatus().equals("PENDING")) {
+            return false;
+        }
+
+        // 물류기업 거절
+        matchingEntity.setLogisticsStatus("REJECTED");
+
+        // 한쪽이라도 거절하면 최종 실패
+        matchingEntity.setFinalStatus("FAILED");
+
+        matchingRepository.save(matchingEntity);
+
+        return true;
+    }
 
 }
