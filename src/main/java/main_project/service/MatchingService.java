@@ -923,90 +923,10 @@ public class MatchingService {
 
     }
 
-    // [9] 수출입 기업 매칭 수락
-    public boolean shipperAccept(Integer matchingId) {
+    // [9] 수출입기업 매칭 수락
+    public boolean shipperAccept(Integer matchingId, String memberId) {
 
         // 1. 매칭 조회
-        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
-
-        // 2. 매칭 없으면 실패
-        if (matchingEntity == null) {
-            
-            return false;
-
-        }
-
-        // 3. 관리자가 승인한 매칭만 수락 가능
-        if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
-
-            return false;
-
-        }
-
-        // 4. 이미 종료된 매칭이면 처리하지 않음
-        if (!matchingEntity.getFinalStatus().equals("PENDING")) {
-
-            return false;
-            
-        }
-
-        // 5. 수출입기업 수락
-        matchingEntity.setShipperStatus("ACCEPTED");
-
-        // 6. 물류기업 이미 수락했다면 최종 성사
-        if (matchingEntity.getLogisticsStatus().equals("ACCEPTED")) {
-
-            matchingEntity.setFinalStatus("COMPLETED");
-            
-        }
-
-        // 7. 저장
-        matchingRepository.save(matchingEntity);
-
-        return true;
-
-    }
-
-    // [10] 수출입기업 매칭 거절
-    public boolean shipperReject(Integer matchingId) {
-
-        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
-
-        if (matchingEntity == null) {
-
-            return false;
-
-        }
-
-        // 관리자 승인된 매칭만 응답 가능
-        if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
-
-            return false;
-
-        }
-
-        // 이미 종료된 매칭이면 처리하지 않음
-        if (!matchingEntity.getFinalStatus().equals("PENDING")) {
-
-            return false;
-
-        }
-
-        // 수출입기업 거절
-        matchingEntity.setShipperStatus("REJECTED");
-
-        // 한쪽이라도 거절하면 최종 실패
-        matchingEntity.setFinalStatus("FAILED");
-
-        matchingRepository.save(matchingEntity);
-
-        return true;
-
-    }
-
-    // [11] 물류기업 매칭 수락
-    public boolean logisticsAccept(Integer matchingId) {
-
         MatchingEntity matchingEntity =
                 matchingRepository.findById(matchingId).orElse(null);
 
@@ -1014,55 +934,183 @@ public class MatchingService {
             return false;
         }
 
+        // 2. 이 매칭의 실제 수출입기업 회원번호
+        String shipperMemberId =
+                matchingEntity
+                        .getCscore1Entity()
+                        .getMemberEntity()
+                        .getMemberId();
+
+        // 3. 로그인 회원이 실제 수출입기업 당사자인지 확인
+        if (!shipperMemberId.equals(memberId)) {
+            return false;
+        }
+
+        // 4. 관리자 승인 확인
         if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
             return false;
         }
 
+        // 5. 이미 종료된 매칭이면 처리 불가
         if (!matchingEntity.getFinalStatus().equals("PENDING")) {
             return false;
         }
 
-        // 물류기업 수락
-        matchingEntity.setLogisticsStatus("ACCEPTED");
+        // 6. 수출입기업 수락
+        matchingEntity.setShipperStatus("ACCEPTED");
 
-        // 수출입기업도 이미 수락했다면 최종 성사
-        if (matchingEntity.getShipperStatus().equals("ACCEPTED")) {
+        // 7. 물류기업도 이미 수락했다면 최종 성사
+        if (matchingEntity.getLogisticsStatus().equals("ACCEPTED")) {
             matchingEntity.setFinalStatus("COMPLETED");
         }
 
         matchingRepository.save(matchingEntity);
 
         return true;
+        
+    }
+
+    // [10] 수출입기업 매칭 거절
+    public boolean shipperReject(Integer matchingId, String memberId) {
+
+        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
+
+        if (matchingEntity == null) {
+
+            return false;
+
+        }
+
+        String shipperMemberId = matchingEntity
+                                .getCscore1Entity()
+                                .getMemberEntity()
+                                .getMemberId();
+
+        // 실제 수출입기업 회원인지 확인
+        if (!shipperMemberId.equals(memberId)) {
+
+            return false;
+
+        }
+
+        if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
+
+            return false;
+
+        }
+
+        if (!matchingEntity.getFinalStatus().equals("PENDING")) {
+
+            return false;
+
+        }
+
+        matchingEntity.setShipperStatus("REJECTED");
+        
+        matchingEntity.setFinalStatus("FAILED");
+
+        matchingRepository.save(matchingEntity);
+
+        return true;
+        
+    }
+
+    // [11] 물류기업 매칭 수락
+    public boolean logisticsAccept(Integer matchingId, String memberId) {
+
+        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
+
+        if (matchingEntity == null) {
+
+            return false;
+
+        }
+
+        // 이 매칭의 실제 물류기업 회원번호
+        String logisticsMemberId = matchingEntity
+                                .getLscore1Entity()
+                                .getMemberEntity()
+                                .getMemberId();
+
+
+        // 실제 물류기업 회원인지 확인
+        if (!logisticsMemberId.equals(memberId)) {
+
+            return false;
+
+        }
+
+        if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
+
+            return false;
+
+        }
+
+        if (!matchingEntity.getFinalStatus().equals("PENDING")) {
+
+            return false;
+
+        }
+
+        matchingEntity.setLogisticsStatus("ACCEPTED");
+
+
+        if (matchingEntity.getShipperStatus().equals("ACCEPTED")) {
+
+            matchingEntity.setFinalStatus("COMPLETED");
+
+        }
+
+        matchingRepository.save(matchingEntity);
+
+        return true;
+
     }
 
 
     // [12] 물류기업 매칭 거절
-    public boolean logisticsReject(Integer matchingId) {
+    public boolean logisticsReject(Integer matchingId, String memberId) {
 
-        MatchingEntity matchingEntity =
-                matchingRepository.findById(matchingId).orElse(null);
+        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
 
         if (matchingEntity == null) {
+
             return false;
+
+        }
+
+        String logisticsMemberId = matchingEntity
+                                .getLscore1Entity()
+                                .getMemberEntity()
+                                .getMemberId();
+
+        // 실제 물류기업 회원인지 확인
+        if (!logisticsMemberId.equals(memberId)) {
+
+            return false;
+
         }
 
         if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
+
             return false;
+
         }
 
         if (!matchingEntity.getFinalStatus().equals("PENDING")) {
+
             return false;
+
         }
 
-        // 물류기업 거절
         matchingEntity.setLogisticsStatus("REJECTED");
 
-        // 한쪽이라도 거절하면 최종 실패
         matchingEntity.setFinalStatus("FAILED");
 
         matchingRepository.save(matchingEntity);
 
         return true;
+        
     }
 
 }
