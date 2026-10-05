@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import main_project.model.dto.LoginDto;
 import main_project.model.entity.MemberEntity;
 import main_project.service.LoginService;
+import main_project.service.RedisTokenService;
 import main_project.util.JwtUtil;
 
 @RestController
@@ -23,6 +24,7 @@ public class LoginController {
 
     private final LoginService loginService;
     private final JwtUtil jwtUtil;
+    private final RedisTokenService redisTokenService;
 
     @PostMapping
     public MemberEntity login(@RequestBody LoginDto loginDto , HttpServletResponse response) {
@@ -34,11 +36,12 @@ public class LoginController {
         if (result == null) { return null;}
 
         // 3. 로그인 성공시 memberId를 이용해서 JWT Access token 생성
-        String token = jwtUtil.creatToken(result.getMemberId());
+        String accessToken = jwtUtil.createAccessToken(result.getMemberId());
+        String refreshToken = jwtUtil.createRefreshToken(result.getMemberId());
 
-        // 4. 생성한 JWT를 쿠키에 저장
+        // 4. Access Token을 쿠키에 저장
         ResponseCookie cookie = ResponseCookie
-                                .from("login_member", token)
+                                .from("login_member", accessToken)
                                 .path("/")
                                 .maxAge(Duration.ofDays(1))
                                 .httpOnly(true)
@@ -49,5 +52,22 @@ public class LoginController {
         response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         return result;  
         
+    }
+
+    @PostMapping ("/logout")
+    public boolean logout(HttpServletResponse response) {
+
+        // 로그인 때 생성한 login_member 쿠키를 같은 이름으로 다시 만들고 유효시간을 0으로 설정
+        ResponseCookie cookie = ResponseCookie
+                    .from("login_member" , "")
+                    .path("/")
+                    .maxAge(0)
+                    .httpOnly(true)
+                    .secure(false)
+                    .sameSite("Lax")
+                    .build();
+        // 쿠키 삭제 명령 전달
+        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        return true;
     }
 }

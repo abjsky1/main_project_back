@@ -32,20 +32,31 @@ public class JwtUtil {
         this.secretKey = Keys.hmacShaKeyFor(key.getBytes(StandardCharsets.UTF_8));
     }
 
-    // [1] JWT Access Token 생성
-    public String creatToken ( String memberId) {
+    // [1] Access Token 생성
+    public String createAccessToken ( String memberId) {
         String jwt = Jwts.builder()
+                    .claim("type", "ACCESS")
                     .subject(memberId)
                     .issuedAt(new Date())
-                    .expiration(new Date( new Date().getTime()+(60 * 60 * 1000)))
+                    .expiration(new Date(new Date().getTime() + 1000L * 60 * 30))
                     .signWith(secretKey)
                     .compact();
-
                     return jwt;
     }
 
-    // [2]  JWT 토큰 검증 메소드
+    // [2] Refresh Token 생성
+    public String createRefreshToken(String memberId) {
+        String refreshToken = Jwts.builder()
+                                .claim("type", "REFRESH")
+                                .subject(memberId)
+                                .issuedAt(new Date())
+                                .expiration( new Date( new Date().getTime() + 1000 * 60 * 60 * 24 * 7))
+                                .signWith(secretKey)
+                                .compact();
+                        return refreshToken;
+                            }
 
+    // [2]  JWT 토큰 검증 메소드
     public String getMemberIdFromToken( String token ) {
 
         try{ Claims claims = Jwts.parser()
@@ -53,9 +64,7 @@ public class JwtUtil {
                             .build()
                             .parseSignedClaims(token)
                             .getPayload();
-        String memberId = claims.getSubject();
-
-        return memberId;
+        return claims.getSubject();
         } catch (Exception e) {
             return null;
         }

@@ -57,6 +57,9 @@ dependencies {
 // 	10. AOP (감사 로그 자동 기록 - audit/AuditAspect)
 	implementation 'org.springframework.boot:spring-boot-starter-aspectj'
 
+// Reids 의존성
+implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
 
 }
 
