@@ -23,9 +23,15 @@ public class AuditDto {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
  
-//  사용자 (member 테이블의 담당자 이름)
+//  사용자 (member 테이블의 담당자 이름 , 비회원은 '비회원')
     private String managerName;
- 
+
+//  사용자 이메일 (화면 사용자 칸에 표시)
+    private String userEmail;
+
+//  회원 유형 (signup 테이블 : 관리자 / 수출입기업 / 물류운송업체 / 비회원)
+    private String signupType;
+
 //  작업 유형 번호 (프론트에서 배지 색 구분용 , 한글 문자열보다 번호로 구분하는 게 안전)
     private Integer actionId;
  
@@ -50,6 +56,8 @@ public class AuditDto {
             .auditId(auditEntity.getAuditId())
             .createdAt(auditEntity.getCreatedAt())
             .managerName(auditEntity.getMemberEntity().getManagerName())
+            .userEmail(auditEntity.getMemberEntity().getUserEmail())
+            .signupType(auditEntity.getMemberEntity().getSignupEntity().getSignupType())
             .actionId(auditEntity.getActionEntity().getActionId())
             .actionType(auditEntity.getActionEntity().getActionType())
             .actionDetail(auditEntity.getActionDetail())

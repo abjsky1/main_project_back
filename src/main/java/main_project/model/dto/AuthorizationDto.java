@@ -2,6 +2,8 @@ package main_project.model.dto;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,7 +32,8 @@ public class AuthorizationDto {
     @Builder.Default
     private Boolean status = true;
 
-//  최근 로그인 (감사로그에서 조회된 시간)
+//  최근 로그인 (감사로그에서 조회된 시간 , 화면 모양 그대로 "2025-12-31 09:14" 로 내려감)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private LocalDateTime lastLoginAt;
 
 

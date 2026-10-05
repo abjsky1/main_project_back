@@ -46,20 +46,31 @@ public class AuditTargets {
         add("DELETE", "/api/lscore/{lscore1Id}", "매칭 조건 삭제", "물류 매칭 조건 삭제");
 
     //  ---------- 매칭 ----------
-        add("POST",   "/api/matching/run/{cscore1Id}", "매칭 실행", "매칭 실행");
-    //  TODO : 매칭 수락 / 거절 / 반려 API 가 생기면 주소에 맞게 추가 (거절 사유는 요청의 rejectReason 을 자동으로 붙임)
-    //  add("POST", "/api/matching/{matchingId}/reject", "매칭 거절", "매칭 거절");
+        add("POST",   "/api/matching/run/{cscore1Id}",                "매칭 실행",            "매칭 실행");
+        add("POST",   "/api/matching/approve/{matchingId}",           "매칭 승인 (알림 발송)", "매칭 승인");
+        add("POST",   "/api/matching/reject/{matchingId}",            "매칭 반려",            "매칭 반려");
+        add("POST",   "/api/matching/shipper/accept/{matchingId}",    "매칭 수락",            "화주 매칭 수락");
+        add("POST",   "/api/matching/shipper/reject/{matchingId}",    "매칭 거절",            "화주 매칭 거절");
+        add("POST",   "/api/matching/logistics/accept/{matchingId}",  "매칭 수락",            "물류 매칭 수락");
+        add("POST",   "/api/matching/logistics/reject/{matchingId}",  "매칭 거절",            "물류 매칭 거절");
+    //  (거절 / 반려 요청에 rejectReason 이 있으면 AuditAspect 가 " - 사유: ..." 를 자동으로 붙임)
+
+    //  ---------- 사용자 권한 관리 (시스템 관리) ----------
+        add("PUT",    "/api/authorization/{memberId}/role",   "사용자 권한 변경", "사용자 권한 변경");
+        add("PUT",    "/api/authorization/{memberId}/status", "사용자 상태 변경", "사용자 상태 변경");
 
     //  ---------- 데이터 조회 ----------
-        add("GET", "/api/cscore",                 "데이터 조회", "화주 매칭 조건 목록 조회");
-        add("GET", "/api/lscore",                 "데이터 조회", "물류 매칭 조건 목록 조회");
-        add("GET", "/api/matching",               "데이터 조회", "매칭 결과 목록 조회");
-        add("GET", "/api/trade/year",             "데이터 조회", "무역 데이터 연도별 비교 조회");
-        add("GET", "/api/cumulative/trade",       "데이터 조회", "누적 무역 현황 조회");
-        add("GET", "/api/exchangerate/nation",    "데이터 조회", "국가별 환율 조회");
-        add("GET", "/month",                      "데이터 조회", "월별 환율 조회");
-        add("GET", "/api/hscode",                 "데이터 조회", "HS 코드 목록 조회");
-        add("GET", "/macross/authorization/find", "데이터 조회", "사용자 권한 관리 목록 조회");
+        add("GET", "/api/cscore",                     "데이터 조회", "화주 매칭 조건 목록 조회");
+        add("GET", "/api/lscore",                     "데이터 조회", "물류 매칭 조건 목록 조회");
+        add("GET", "/api/matching",                   "데이터 조회", "매칭 결과 목록 조회");
+        add("GET", "/api/matching/member/{memberId}", "데이터 조회", "내 매칭 알림 조회");
+        add("GET", "/api/trade/year",                 "데이터 조회", "무역 데이터 연도별 비교 조회");
+        add("GET", "/api/cumulative/trade",           "데이터 조회", "누적 무역 현황 조회");
+        add("GET", "/api/exchangerate/nation",        "데이터 조회", "국가별 환율 조회");
+        add("GET", "/api/today/exchangerate",         "데이터 조회", "당일 환율 조회");
+        add("GET", "/month",                          "데이터 조회", "월별 환율 조회");
+        add("GET", "/api/hscode",                     "데이터 조회", "HS 코드 목록 조회");
+        add("GET", "/api/authorization",              "데이터 조회", "사용자 권한 관리 목록 조회");
 
     //  ※ 일부러 등록 안 한 것 : /api/cscore/{id}/cscore2 처럼 표의 행마다 반복 호출되는 상세 조회 , 감사 로그 조회 자체
     }

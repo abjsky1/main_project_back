@@ -43,12 +43,13 @@ public class AuditService {
     private Map<String, Integer> actionIdMap = null;
 
 
-//  감사 로그 목록 조회 (최신순)
+//  감사 로그 목록 조회 (필터 조건 + 최신순)
+//  user : 이메일/이름 검색어 , action : 작업 유형 검색어 , result : 성공(true)/실패(false) , 비어 있으면 조건 없음
     @Transactional (readOnly = true)
-    public List<AuditDto> findAll(){
+    public List<AuditDto> findAll(String user, String action, Boolean result){
 
-    //  1. 감사 로그 전체 조회 (사용자 , 작업 유형까지 같이)     → 쿼리 1번
-        List<AuditEntity> auditEntities = auditRepository.findAllWithMemberAndAction();
+    //  1. 조건에 맞는 감사 로그 조회 (사용자 , 회원 유형 , 작업 유형까지 같이)     → 쿼리 1번
+        List<AuditEntity> auditEntities = auditRepository.search(blankToNull(user), blankToNull(action), result);
 
     //  2. 엔티티 → DTO 로 변환
         return auditEntities.stream().map((auditEntity)->{
@@ -56,6 +57,12 @@ public class AuditService {
             return AuditDto.from(auditEntity);
 
         }).toList();
+    }
+
+
+//  빈 검색어("" , "  ")는 조건 없음(null)으로
+    private String blankToNull(String value){
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 
 
