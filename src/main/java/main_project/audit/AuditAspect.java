@@ -94,7 +94,7 @@ public class AuditAspect {
             AuditSaveDto auditSaveDto = AuditSaveDto.builder()
                 .memberId(findMemberId(request, args, result))
                 .actionType(actionType)
-                .actionDetail(makeDetail(target, actionType, request, args))
+                .actionDetail(makeDetail(target, actionType, success, request, args))
                 .fipAddress(clientIp(request))
                 .actionResult(success)
                 .build();
@@ -111,7 +111,7 @@ public class AuditAspect {
 //  대상 문구 만들기 : 등록표의 기본 문구 + 작업 유형별로 필요한 정보 덧붙이기
 //  (새로운 작업 유형에 정보를 붙이고 싶으면 여기에 case 추가)
 //  ---------------------------------------------------------------------
-    private String makeDetail(AuditTargets.Target target, String actionType, HttpServletRequest request, Object[] args){
+    private String makeDetail(AuditTargets.Target target, String actionType, boolean success, HttpServletRequest request, Object[] args){
 
         String detail = target.detail();
 
@@ -123,15 +123,44 @@ public class AuditAspect {
         //  회원 가입 : 가입한 이메일
             case "회원 가입" -> detail + " (" + valueOrDash(readField(args, "userEmail")) + ")";
 
-        //  조건 삭제 , 매칭 실행 : 주소의 번호
-            case "매칭 조건 삭제", "매칭 실행" -> detail + pathNumber(request);
+        //  조건 삭제 , 매칭 실행 / 승인 / 수락 : 주소의 번호
+            case "매칭 조건 삭제", "매칭 실행", "매칭 승인 (알림 발송)", "매칭 수락" -> detail + pathNumber(request);
 
-        //  매칭 거절 / 반려 : 주소의 번호 + 거절 사유
-            case "매칭 거절", "매칭 반려" -> detail + pathNumber(request) + " - 사유: " + rejectReason(request, args);
+        //  매칭 거절 / 반려 : 주소의 번호 + 거절 사유 (요청에 사유가 있을 때만)
+            case "매칭 거절", "매칭 반려" -> detail + pathNumber(request) + rejectReasonText(request, args);
+
+        //  권한 / 상태 변경 : 스위치라서 바뀐 "결과"를 보고 문구 결정 (성공했을 때만 , 컨트롤러가 끝나 이미 DB 에 반영된 상태)
+            case "사용자 권한 변경" -> roleChangeText(detail, success, pathValue(request, "memberId"));
+            case "사용자 상태 변경" -> statusChangeText(detail, success, pathValue(request, "memberId"));
 
         //  그 외(데이터 조회 등) : 등록표 문구 그대로
             default -> detail;
         };
+    }
+
+
+//  권한 변경 결과 : "관리자 지정 (대상: 김승영 · ybtex@test.com)" / "권한 해제 (대상: ...)"
+    private String roleChangeText(String detail, boolean success, String memberId){
+        MemberEntity memberEntity = (memberId == null) ? null : memberRepository.findById(memberId).orElse(null);
+        if (!success || memberEntity == null) { return detail + targetText(memberEntity, memberId); }
+
+    //  roleId 2 = ROLE_ADMIN (getRoleId 는 LAZY 프록시에서도 추가 조회 없이 읽힘)
+        boolean isAdmin = memberEntity.getRoleEntity().getRoleId() == 2;
+        return (isAdmin ? "관리자 지정" : "권한 해제") + targetText(memberEntity, memberId);
+    }
+
+//  상태 변경 결과 : "활성화 (대상: ...)" / "비활성화 (대상: ...)"
+    private String statusChangeText(String detail, boolean success, String memberId){
+        MemberEntity memberEntity = (memberId == null) ? null : memberRepository.findById(memberId).orElse(null);
+        if (!success || memberEntity == null) { return detail + targetText(memberEntity, memberId); }
+
+        return (Boolean.TRUE.equals(memberEntity.getStatus()) ? "활성화" : "비활성화") + targetText(memberEntity, memberId);
+    }
+
+//  " (대상: 이름 · 이메일)"  (회원을 못 찾으면 번호만)
+    private String targetText(MemberEntity memberEntity, String memberId){
+        if (memberEntity == null) { return " (대상: " + valueOrDash(memberId) + ")"; }
+        return " (대상: " + memberEntity.getManagerName() + " · " + memberEntity.getUserEmail() + ")";
     }
 
 
@@ -226,14 +255,23 @@ public class AuditAspect {
         return "";
     }
 
-//  거절 / 반려 사유 : 주소의 ?rejectReason= → 요청 body 의 rejectReason → 없으면 "사유 미기재"
-    private String rejectReason(HttpServletRequest request, Object[] args){
+//  주소의 {이름} 값 (예: /api/authorization/{memberId}/role 의 memberId)
+    private String pathValue(HttpServletRequest request, String name){
+        Object variables = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+        if (variables instanceof Map<?, ?> map && map.get(name) != null) {
+            return map.get(name).toString();
+        }
+        return null;
+    }
+
+//  거절 / 반려 사유 : 주소의 ?rejectReason= → 요청 body 의 rejectReason → " - 사유: ..." (사유가 없으면 빈 문자열)
+    private String rejectReasonText(HttpServletRequest request, Object[] args){
         String reason = request.getParameter(REJECT_REASON_FIELD);
         if (reason == null || reason.isBlank()) {
             Object value = readField(args, REJECT_REASON_FIELD);
             reason = (value == null) ? null : value.toString();
         }
-        return (reason == null || reason.isBlank()) ? "사유 미기재" : reason;
+        return (reason == null || reason.isBlank()) ? "" : " - 사유: " + reason;
     }
 
 //  컨트롤러 메소드 인자(요청 body DTO , Map)에서 필드 값 꺼내기

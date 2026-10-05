@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import main_project.model.entity.AuditEntity;
@@ -40,15 +41,21 @@ public interface AuditRepository extends JpaRepository<AuditEntity,Integer>{
 //  @Query("SELECT member_id AS memberId, MAX(created_at) AS lastLoginAt FROM audit WHERE action_id = 2 AND action_result = true GROUP BY member_id", nativeQuery = true )
     List<LastLogin> findLastLoginList();
 
-//  감사 로그 목록 조회 (최신순) + 사용자 이름 , 작업 유형까지 한 번에
-//  memberEntity , actionEntity 둘 다 LAZY 라서 그냥 findAll() 하면
-//  getMemberEntity().getManagerName() 할 때마다 추가 쿼리가 나감 (N+1).
-//  JOIN FETCH 로 처음부터 같이 가져오면 쿼리 1번으로 끝.
+//  감사 로그 목록 조회 (필터 조건 + 최신순) + 사용자 , 회원 유형 , 작업 유형까지 한 번에
+//  - user   : 이메일 또는 이름에 포함된 글자 (비회원은 이름이 '비회원')
+//  - action : 작업 유형 이름에 포함된 글자
+//  - result : true(성공) / false(실패)
+//  → 조건 값이 null 이면 그 조건은 빼고 조회 (전부 null 이면 전체)
+//  memberEntity , signupEntity , actionEntity 모두 LAZY 라서 JOIN FETCH 로 같이 가져와야 쿼리 1번으로 끝 (N+1 방지).
 //  ORDER BY : 최신 로그가 위로 (같은 시간이면 나중에 저장된 번호가 위로)
     @Query("SELECT a FROM AuditEntity a " +
-           "JOIN FETCH a.memberEntity " +
-           "JOIN FETCH a.actionEntity " +
+           "JOIN FETCH a.memberEntity m " +
+           "JOIN FETCH m.signupEntity " +
+           "JOIN FETCH a.actionEntity t " +
+           "WHERE (:user IS NULL OR m.userEmail LIKE CONCAT('%', :user, '%') OR m.managerName LIKE CONCAT('%', :user, '%')) " +
+           "AND (:action IS NULL OR t.actionType LIKE CONCAT('%', :action, '%')) " +
+           "AND (:result IS NULL OR a.actionResult = :result) " +
            "ORDER BY a.createdAt DESC, a.auditId DESC")
-    List<AuditEntity> findAllWithMemberAndAction();
+    List<AuditEntity> search(@Param("user") String user, @Param("action") String action, @Param("result") Boolean result);
 
 }
