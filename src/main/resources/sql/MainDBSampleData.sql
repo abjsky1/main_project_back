@@ -1027,3 +1027,24 @@ INSERT INTO lscore3 (lscore3_id, lscore1_id, general_container, refrigerated, da
 -- (29, 10, 29, 22, 20, 12, 10, 6, 70, FALSE, '필수조건 충족. 비정기·직항 22점, 가용량 110.00% 20점, HS 12점, 일정 10점, 경험 400회 6점. 총 70점', '비정기 운항 확인 / 가용량 여유 10.00% / HS 앞 4자리만 일치 / 희망일보다 7일 늦음', NOW(), NOW()),
 -- (30, 10, 30, 18, 20, 12, 5, 0, 55, FALSE, '필수조건 충족. 비정기·환적 18점, 가용량 105.00% 20점, HS 12점, 일정 5점, 경험 0회 0점. 총 55점', '비정기 운항 확인 / 환적 운송 확인 / 가용량 여유 5.00% / HS 앞 4자리만 일치 / 희망일보다 20일 늦음 / 취급 경험 0회 확인', NOW(), NOW()),
 -- (31, 72, 65, 30, 25, 0, 7, 10, 72, FALSE, '필수조건 충족. 정기·직항 30점, 가용량 1475.59% 25점, HS 0점, 일정 7점, 경험 819회 10점. 총 72점', 'HS 앞 2자리 불일치 / 희망일보다 14일 늦음', NOW(), NOW());
+
+-- ============================================================================
+-- [감사 로그용 추가 데이터] (audit/AuditAspect , AuditService)
+-- 기존 INSERT 문은 건드리지 않고 여기에만 추가
+-- ============================================================================
+
+-- 1. 비회원 가입 유형
+INSERT INTO signup (signup_id, signup_type, created_at, updated_at) VALUES
+(401, '비회원', NOW(), NOW());
+
+-- 2. 비회원 공통 계정 (로그인 안 한 손님 , 미가입 이메일 로그인 시도 등의 로그를 연결)
+--    password '-' 는 BCrypt 값이 아니고 status FALSE 라서 이 계정으로는 로그인 불가
+--    사용자 권한 관리 목록에서는 제외됨 (MemberRepository.findAllWithRole)
+INSERT INTO member (member_id, signup_id, user_email, user_password, company_name, manager_name, business_reg_no, user_phone, company_address, created_at, updated_at, role_id, status) VALUES
+('GUEST', 401, 'guest@macross.local', '-', '비회원', '비회원', '-', '-', '-', NOW(), NOW(), 1, FALSE);
+
+-- 3. 감사 로그 작업 유형 추가 (이름은 audit/AuditTargets 등록표와 글자까지 같아야 함)
+INSERT INTO action (action_id, action_type, created_at, updated_at) VALUES
+(15, '매칭 조건 등록', NOW(), NOW()),
+(16, '매칭 조건 삭제', NOW(), NOW()),
+(17, '매칭 실행', NOW(), NOW());

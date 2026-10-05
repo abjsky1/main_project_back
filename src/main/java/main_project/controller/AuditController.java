@@ -12,7 +12,7 @@ import main_project.service.AuditService;
  
 @RestController
 @RequiredArgsConstructor
-@RequestMapping ("/doodoo/audit")      // ※ 주소는 팀 규칙에 맞게 바꿔줘
+@RequestMapping ("/api/audit")      // 프론트 Vite 프록시가 /api 로 시작하는 주소만 백엔드로 전달
 public class AuditController {
  
     private final AuditService auditService;
