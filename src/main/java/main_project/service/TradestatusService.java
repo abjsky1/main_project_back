@@ -129,33 +129,27 @@ public class TradestatusService {
                         throw new IllegalArgumentException("CSV 컬럼 부족");
                     }
 
-                    // 10번째 컬럼: 연월
-                    YearMonth month =
-                            YearMonth.parse(row[9].trim(), format);
+                    // 연월
+                    YearMonth month = YearMonth.parse(row[9].trim(), format);
 
                     // 해당 월이 있으면 기존 DTO 사용
                     // 없으면 금액이 0인 DTO를 만들어 Map에 저장
-                    TradestatusDto total = monthly.computeIfAbsent(
-                            month, key -> emptyTrade());
+                    TradestatusDto total = monthly.computeIfAbsent(month, key -> emptyTrade());
 
-                    // 2번째 컬럼: 수출액
-                    total.setExpDlr(
-                            total.getExpDlr().add(amount(row[1])));
+                    // 수출액
+                    total.setExpDlr(total.getExpDlr().add(amount(row[1])));
 
-                    // 5번째 컬럼: 수입액
-                    total.setImpDlr(
-                            total.getImpDlr().add(amount(row[4])));
+                    // 수입액
+                    total.setImpDlr(total.getImpDlr().add(amount(row[4])));
 
-                    // 1번째 컬럼: 무역수지
-                    total.setBalPayments(
-                            total.getBalPayments().add(amount(row[0])));
+                    // 무역수지
+                    total.setBalPayments(total.getBalPayments().add(amount(row[0])));
                 }
 
             } catch (Exception e) {
 
                 // 일부만 읽은 금액을 반환하지 않고 전체 처리 중단
-                throw new IllegalStateException(
-                        "CSV 읽기 실패: " + file.getName(), e);
+                throw new IllegalStateException("CSV 읽기 실패: " + file.getName(), e);
             }
         }
 
@@ -183,8 +177,7 @@ public class TradestatusService {
             // 금액은 단위 변환 없이 원본 달러 값으로 합산
             total.setExpDlr(total.getExpDlr().add(data.getExpDlr()));
             total.setImpDlr(total.getImpDlr().add(data.getImpDlr()));
-            total.setBalPayments(
-                    total.getBalPayments().add(data.getBalPayments()));
+            total.setBalPayments(total.getBalPayments().add(data.getBalPayments()));
         }
 
         return total;
