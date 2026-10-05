@@ -76,7 +76,7 @@ public class TodayrateService {
 
         // 최신 환율과 증감률 반환
         TodayrateDto result = TodayrateDto.builder()
-                .rate(rate.setScale(2, RoundingMode.HALF_UP))
+                .rate(rate.setScale(1, RoundingMode.HALF_UP))
                 .changerate(changerate)
                 .build();
 
