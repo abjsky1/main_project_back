@@ -1,6 +1,7 @@
 package main_project.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,70 @@ public class MatchingController {
     public List<MatchingDto> matchingRead() {
         return matchingService.matchingRead();
     }
+
+    // 매칭 승인(관리자)
+    @PostMapping("/approve/{matchingId}")
+    public boolean matchingApprove( 
+        @PathVariable ("matchingId") Integer matchingId) {
+
+            return matchingService.matchingApprove(matchingId);
+
+        }
+
+    // 매칭 반려(관라자)
+    @PostMapping("/reject/{matchingId}")
+    public boolean matchingReject( 
+        @PathVariable ("matchingId") Integer matchingId) {
+
+            return matchingService.matchingReject(matchingId);
+
+        }
+
+    // 회원별 승인 매칭 조회
+    @GetMapping("/member/{memberId}")
+    public List<MatchingDto> matchingMemberRead(
+        @PathVariable ("memberId") String memberId) {
+
+        return matchingService.matchingMemberRead(memberId);
+
+    }
     
+    // 수출입기업(화주) 매칭 수락
+    @PostMapping("/shipper/accept/{matchingId}")
+    public boolean shipperAccept(
+            @PathVariable ("matchingId") Integer matchingId,
+            @RequestParam ("memberId") String memberId) {
+
+        return matchingService.shipperAccept(matchingId, memberId);
+    }
+
+
+    // 수출입기업 매칭 거절
+    @PostMapping("/shipper/reject/{matchingId}")
+    public boolean shipperReject(
+            @PathVariable ("matchingId") Integer matchingId,
+            @RequestParam ("memberId") String memberId) {
+
+        return matchingService.shipperReject(matchingId, memberId);
+    }
+
+    // 물류기업 매칭 수락
+    @PostMapping("/logistics/accept/{matchingId}")
+    public boolean logisticsAccept(
+            @PathVariable ("matchingId") Integer matchingId,
+            @RequestParam ("memberId") String memberId) {
+
+        return matchingService.logisticsAccept(matchingId, memberId);
+    }
+
+
+    // 물류기업 매칭 거절
+    @PostMapping("/logistics/reject/{matchingId}")
+    public boolean logisticsReject(
+            @PathVariable ("matchingId") Integer matchingId,
+            @RequestParam ("memberId") String memberId) {
+
+        return matchingService.logisticsReject(matchingId, memberId);
+    }
     
 }
