@@ -24,7 +24,7 @@ import main_project.model.dto.TradestatusDto;
 public class TradestatusService {
 
     // CSV 파일이 저장된 폴더
-    private final String folderPath = "C:/Users/gmgd0/문서/main_project_data_trade";
+    private final String folderPath = "C:/mpdata";
 
     // 모든 연도의 월별 합계를 메모리에 보관
     private Map<YearMonth, TradestatusDto> monthlyCache;
