@@ -43,7 +43,7 @@ public class LoginController {
         ResponseCookie accesscookie = ResponseCookie
                                 .from("AccessToken", accessToken)
                                 .path("/")
-                                .maxAge(Duration.ofDays(1))
+                                .maxAge(Duration.ofMinutes(20))
                                 .httpOnly(true)
                                 .secure(false)
                                 .sameSite("Lax")
@@ -52,9 +52,9 @@ public class LoginController {
 
         // 5. Refresh Token을 쿠키에 저장
         ResponseCookie refreshcookie = ResponseCookie
-                                .from("AccessToken", accessToken)
+                                .from("RefreshToken", refreshToken)
                                 .path("/")
-                                .maxAge(Duration.ofDays(1))
+                                .maxAge(Duration.ofDays(7))
                                 .httpOnly(true)
                                 .secure(false)
                                 .sameSite("Lax")
