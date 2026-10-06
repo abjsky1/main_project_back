@@ -1,102 +1,125 @@
 package main_project.audit;
 
-import java.lang.reflect.Method;
-import java.util.Map;
-
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.web.servlet.HandlerMapping;
 
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import main_project.model.dto.AuditSaveDto;
-import main_project.model.entity.MemberEntity;
-import main_project.model.repository.MemberRepository;
 import main_project.service.AuditService;
-import main_project.util.JwtUtil;
 
 //  =====================================================================
-//  감사 로그 자동 기록 (AOP)
-//  - controller 패키지의 모든 컨트롤러 메소드 "주변(@Around)"에서 실행됨 → 팀원 코드는 수정할 필요 없음
-//  - 등록표(AuditTargets)에 있는 API 만 기록 , 나머지는 그냥 통과
+//  감사 로그 자동 기록 AOP
+//
+//  [AOP 가 뭔가요?]
+//  "여러 메소드에 공통으로 필요한 일"을 한 곳에 모아서 , 원래 메소드 코드를 고치지 않고 끼워 넣는 방법.
+//  여기서는 "누가 무엇을 했는지 기록하기"를 모든 컨트롤러에 끼워 넣음.
+//  → 팀원 컨트롤러 / 서비스 코드는 한 줄도 고치지 않아도 로그가 쌓임.
+//
+//  [이 파일에서 쓰는 AOP 용어]
+//  - Aspect(애스펙트)     : 공통 기능을 모아 둔 클래스 = 이 클래스 (@Aspect)
+//  - Advice(어드바이스)   : 끼워 넣을 실제 코드 = writeAuditLog() 메소드
+//      @Around            : 원래 메소드의 "앞과 뒤"를 감싸서 실행 (앞에서 확인 → 원래 메소드 실행 → 뒤에서 기록)
+//  - Pointcut(포인트컷)   : 어디에 끼워 넣을지 정하는 규칙
+//      "within(main_project.controller..*)" = controller 패키지(하위 포함) 안의 모든 클래스의 메소드
+//  - JoinPoint(조인포인트): 끼워 넣어진 "그 순간의 원래 메소드" 정보 (어떤 메소드인지 , 받은 값 , 반환 타입 ...)
+//      ProceedingJoinPoint.proceed() 를 호출해야 원래 컨트롤러 메소드가 실행됨
+//      (proceed 를 안 부르면 원래 메소드는 실행되지 않으니 꼭 불러야 함!)
 //
 //  [흐름]
-//  1) 지금 요청의 "HTTP메소드 + 주소 패턴" 으로 등록표 찾기 → 없으면 원래 메소드만 실행
-//  2) 원래 컨트롤러 메소드 실행
-//  3) 성공 / 실패 판단 (예외 , null 반환 , false 반환 = 실패)
-//  4) 회원 , IP , 대상 문구 만들어서 AuditService.record() 로 저장
-//     (저장 중 오류가 나도 원래 응답에는 영향 없음)
+//   요청 → 스프링이 컨트롤러 메소드를 부르려는 순간 → writeAuditLog() 가 먼저 실행됨
+//     [1] 지금 요청 꺼내기
+//     [2] 등록표(AuditTargets)에 있는 API 인지 확인 → 없으면 원래 메소드만 실행하고 끝
+//     [3] joinPoint.proceed() 로 원래 컨트롤러 메소드 실행
+//     [4] 결과를 보고 성공/실패 판단 → 감사 로그 저장 (AuditService.record)
+//     [5] 원래 결과를 그대로 돌려줌 (화면이 받는 응답은 AOP 가 없을 때와 똑같음)
+//
+//  [역할 나누기]
+//   - AuditAspect        : AOP 흐름 (이 파일)
+//   - AuditTargets       : 어떤 API 를 기록할지 적어 둔 등록표
+//   - AuditRequestReader : 요청에서 IP , 회원 , 주소 번호 , body 값 꺼내기
+//   - AuditDetailMaker   : 화면 "대상" 칸 문구 만들기
+//   - AuditService       : DB(audit 테이블)에 저장
 //  =====================================================================
-@Slf4j
-@Aspect
-@Component
-@RequiredArgsConstructor
+@Slf4j                      // log.warn(...) 으로 콘솔에 경고를 남길 수 있게 해 줌
+@Aspect                     // "이 클래스는 AOP(애스펙트)입니다"
+@Component                  // 스프링이 서버를 켤 때 이 클래스를 만들어서 등록 (등록해야 AOP 가 동작함)
+@RequiredArgsConstructor    // 아래 final 필드들을 스프링이 자동으로 넣어 줌
 public class AuditAspect {
 
-//  로그인 성공 시 LoginController 가 만들어주는 JWT 쿠키 이름
-    private static final String LOGIN_COOKIE = "login_member";
-
-//  매칭 거절 / 반려 요청에서 사유가 담기는 필드 이름 (팀원 API 와 이름을 맞춰야 함)
-    private static final String REJECT_REASON_FIELD = "rejectReason";
-
-    private final AuditTargets auditTargets;
-    private final AuditService auditService;
-    private final MemberRepository memberRepository;
-    private final JwtUtil jwtUtil;
+    private final AuditTargets auditTargets;               // 등록표
+    private final AuditRequestReader requestReader;        // 요청 정보 꺼내기 도우미
+    private final AuditDetailMaker detailMaker;            // "대상" 문구 만들기 도우미
+    private final AuditService auditService;               // 감사 로그 저장
 
 
+//  ---------------------------------------------------------------------
+//  Advice : controller 패키지의 모든 메소드를 감싸서 실행
+//  반환값(Object) = 원래 컨트롤러 메소드가 돌려준 값 → 그대로 돌려줘야 화면이 정상 응답을 받음
+//  throws Throwable = 원래 메소드에서 난 오류도 그대로 밖으로 내보냄
+//  ---------------------------------------------------------------------
     @Around("within(main_project.controller..*)")
     public Object writeAuditLog(ProceedingJoinPoint joinPoint) throws Throwable {
 
-    //  1. 등록표에서 찾기
-        HttpServletRequest request = currentRequest();
-        if (request == null) { return joinPoint.proceed(); }
+    //  [1] 지금 처리 중인 요청 꺼내기 (웹 요청이 아니면 기록하지 않고 원래 메소드만 실행)
+        HttpServletRequest request = requestReader.currentRequest();
+        if (request == null) {
+            return joinPoint.proceed();
+        }
 
-        Object urlPattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);   // 예) /api/cscore/{cscore1Id}
-        AuditTargets.Target target = (urlPattern == null) ? null : auditTargets.find(request.getMethod(), urlPattern.toString());
+    //  [2] 등록표에서 찾기  예) "DELETE" + "/api/cscore/{cscore1Id}"
+    //      등록표에 없는 API 면 기록하지 않고 원래 메소드만 실행
+        String httpMethod = request.getMethod();
+        String urlPattern = requestReader.urlPattern(request);
+        AuditTarget target = auditTargets.find(httpMethod, urlPattern);
 
-        if (target == null) { return joinPoint.proceed(); }
+        if (target == null) {
+            return joinPoint.proceed();
+        }
 
-    //  2. 원래 컨트롤러 메소드 실행
-        Object result = null;
-        Throwable error = null;
+    //  [3] 원래 컨트롤러 메소드 실행
+        Object result;
         try {
             result = joinPoint.proceed();
-            return result;
-        } catch (Throwable e) {
-            error = e;
-            throw e;
-        } finally {
-        //  3~4. 성공이든 실패든 기록
-            saveLog(joinPoint, request, target, result, error);
+
+        } catch (Throwable error) {
+        //  원래 메소드에서 오류가 났을 때 : "실패"로 기록하고 , 오류는 그대로 다시 던짐
+        //  (오류를 여기서 삼키면 원래 동작이 바뀌어 버리니까)
+            saveAuditLog(joinPoint, request, target, null, error);
+            throw error;
         }
+
+    //  [4] 원래 메소드가 끝났을 때 : 결과를 보고 성공/실패 판단해서 기록
+        saveAuditLog(joinPoint, request, target, result, null);
+
+    //  [5] 원래 결과를 그대로 돌려줌
+        return result;
     }
 
 
-//  감사 로그 저장 (어떤 오류가 나도 여기서 끝내서 원래 응답은 그대로 나가게)
-    private void saveLog(ProceedingJoinPoint joinPoint, HttpServletRequest request, AuditTargets.Target target, Object result, Throwable error){
+//  ---------------------------------------------------------------------
+//  감사 로그 1건 저장
+//  기록하다가 어떤 오류가 나도 여기서 잡아서 경고만 남김
+//  → 로그 저장 실패 때문에 사용자의 원래 요청(로그인 , 조회 등)이 실패하면 안 되니까
+//  ---------------------------------------------------------------------
+    private void saveAuditLog(ProceedingJoinPoint joinPoint, HttpServletRequest request, AuditTarget target, Object result, Throwable error){
         try {
-            Object[] args = joinPoint.getArgs();
-            boolean success = isSuccess(joinPoint, result, error);
-            String actionType = target.actionFor(success);
+            Object[] args = joinPoint.getArgs();                       // 컨트롤러가 받은 값들 (요청 body DTO 등)
+            boolean success = isSuccess(joinPoint, result, error);     // 성공했나?
+            String actionType = target.getActionType(success);         // 성공/실패에 맞는 작업 유형
 
+        //  저장할 내용을 쪽지(AuditSaveDto)에 담기
             AuditSaveDto auditSaveDto = AuditSaveDto.builder()
-                .memberId(findMemberId(request, args, result))
-                .actionType(actionType)
-                .actionDetail(makeDetail(target, actionType, success, request, args))
-                .fipAddress(clientIp(request))
-                .actionResult(success)
+                .memberId(requestReader.findMemberId(request, args, result))                       // 누가 (못 찾으면 null → 비회원)
+                .actionType(actionType)                                                            // 무슨 작업
+                .actionDetail(detailMaker.makeDetail(target, actionType, success, request, args))  // 대상 문구
+                .fipAddress(requestReader.clientIp(request))                                       // 어디서 (IP)
+                .actionResult(success)                                                             // 성공 / 실패
                 .build();
 
             auditService.record(auditSaveDto);
@@ -108,198 +131,40 @@ public class AuditAspect {
 
 
 //  ---------------------------------------------------------------------
-//  대상 문구 만들기 : 등록표의 기본 문구 + 작업 유형별로 필요한 정보 덧붙이기
-//  (새로운 작업 유형에 정보를 붙이고 싶으면 여기에 case 추가)
-//  ---------------------------------------------------------------------
-    private String makeDetail(AuditTargets.Target target, String actionType, boolean success, HttpServletRequest request, Object[] args){
-
-        String detail = target.detail();
-
-        return switch (actionType) {
-
-        //  로그인 / 로그인 실패 : 입력한 이메일 (미가입 이메일 시도도 그대로 남김)
-            case "로그인", "로그인 실패" -> detail + " (입력 이메일: " + valueOrDash(readField(args, "userEmail")) + ")";
-
-        //  회원 가입 : 가입한 이메일
-            case "회원 가입" -> detail + " (" + valueOrDash(readField(args, "userEmail")) + ")";
-
-        //  조건 삭제 , 매칭 실행 / 승인 / 수락 : 주소의 번호
-            case "매칭 조건 삭제", "매칭 실행", "매칭 승인 (알림 발송)", "매칭 수락" -> detail + pathNumber(request);
-
-        //  매칭 거절 / 반려 : 주소의 번호 + 거절 사유 (요청에 사유가 있을 때만)
-            case "매칭 거절", "매칭 반려" -> detail + pathNumber(request) + rejectReasonText(request, args);
-
-        //  권한 / 상태 변경 : 스위치라서 바뀐 "결과"를 보고 문구 결정 (성공했을 때만 , 컨트롤러가 끝나 이미 DB 에 반영된 상태)
-            case "사용자 권한 변경" -> roleChangeText(detail, success, pathValue(request, "memberId"));
-            case "사용자 상태 변경" -> statusChangeText(detail, success, pathValue(request, "memberId"));
-
-        //  그 외(데이터 조회 등) : 등록표 문구 그대로
-            default -> detail;
-        };
-    }
-
-
-//  권한 변경 결과 : "관리자 지정 (대상: 김승영 · ybtex@test.com)" / "권한 해제 (대상: ...)"
-    private String roleChangeText(String detail, boolean success, String memberId){
-        MemberEntity memberEntity = (memberId == null) ? null : memberRepository.findById(memberId).orElse(null);
-        if (!success || memberEntity == null) { return detail + targetText(memberEntity, memberId); }
-
-    //  roleId 2 = ROLE_ADMIN (getRoleId 는 LAZY 프록시에서도 추가 조회 없이 읽힘)
-        boolean isAdmin = memberEntity.getRoleEntity().getRoleId() == 2;
-        return (isAdmin ? "관리자 지정" : "권한 해제") + targetText(memberEntity, memberId);
-    }
-
-//  상태 변경 결과 : "활성화 (대상: ...)" / "비활성화 (대상: ...)"
-    private String statusChangeText(String detail, boolean success, String memberId){
-        MemberEntity memberEntity = (memberId == null) ? null : memberRepository.findById(memberId).orElse(null);
-        if (!success || memberEntity == null) { return detail + targetText(memberEntity, memberId); }
-
-        return (Boolean.TRUE.equals(memberEntity.getStatus()) ? "활성화" : "비활성화") + targetText(memberEntity, memberId);
-    }
-
-//  " (대상: 이름 · 이메일)"  (회원을 못 찾으면 번호만)
-    private String targetText(MemberEntity memberEntity, String memberId){
-        if (memberEntity == null) { return " (대상: " + valueOrDash(memberId) + ")"; }
-        return " (대상: " + memberEntity.getManagerName() + " · " + memberEntity.getUserEmail() + ")";
-    }
-
-
-//  ---------------------------------------------------------------------
-//  성공 / 실패 판단
-//  예외 발생 , null 반환 (예: 로그인 실패) , false 반환 (예: 등록/삭제 실패) , 에러 상태 ResponseEntity → 실패
+//  성공 / 실패 판단 규칙 (위에서부터 차례로 확인)
+//   1) 오류가 났으면                          → 실패
+//   2) 반환 타입이 void (아무것도 안 돌려줌)  → 성공
+//   3) 돌려준 값이 null                       → 실패  (예: 로그인 실패하면 null 을 돌려줌)
+//   4) 돌려준 값이 true / false               → 그 값 그대로  (예: 삭제 실패하면 false)
+//   5) ResponseEntity 의 상태 코드가 오류(4xx , 5xx) → 실패
+//   6) 그 밖에는                              → 성공
 //  ---------------------------------------------------------------------
     private boolean isSuccess(ProceedingJoinPoint joinPoint, Object result, Throwable error){
 
-        if (error != null) { return false; }
+        if (error != null) {
+            return false;
+        }
 
-        Class<?> returnType = ((MethodSignature) joinPoint.getSignature()).getReturnType();
-        if (returnType == void.class) { return true; }
+    //  joinPoint 에서 원래 메소드 정보를 꺼내 반환 타입 확인
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        if (signature.getReturnType() == void.class) {
+            return true;
+        }
 
-        if (result == null) { return false; }
-        if (result instanceof Boolean bool) { return bool; }
-        if (result instanceof ResponseEntity<?> response) { return !response.getStatusCode().isError(); }
+        if (result == null) {
+            return false;
+        }
+
+        if (result instanceof Boolean) {
+            return (Boolean) result;
+        }
+
+        if (result instanceof ResponseEntity) {
+            ResponseEntity<?> response = (ResponseEntity<?>) result;
+            return !response.getStatusCode().isError();
+        }
 
         return true;
-    }
-
-
-//  ---------------------------------------------------------------------
-//  회원 찾기 (못 찾으면 null → AuditService 에서 비회원 GUEST 로 저장)
-//  ---------------------------------------------------------------------
-    private String findMemberId(HttpServletRequest request, Object[] args, Object result){
-
-    //  1. 로그인 성공 : LoginController 가 돌려준 회원
-        if (result instanceof MemberEntity memberEntity) { return memberEntity.getMemberId(); }
-
-    //  2. 로그인 쿠키(JWT)가 있으면 그 회원 (만료 / 위조 토큰이면 null)
-        String token = cookieValue(request, LOGIN_COOKIE);
-        if (token != null) {
-            String memberId = jwtUtil.getMemberIdFromToken(token);
-            if (memberId != null) { return memberId; }
-        }
-
-    //  3. 쿠키가 없으면 요청 body 의 userEmail 로 찾기 (로그인 실패 , 회원 가입)
-        Object userEmail = readField(args, "userEmail");
-        if (userEmail != null) {
-            return memberRepository.findByUserEmail(userEmail.toString())
-                .map(MemberEntity::getMemberId)
-                .orElse(null);
-        }
-
-        return null;
-    }
-
-
-//  ---------------------------------------------------------------------
-//  작은 도우미들
-//  ---------------------------------------------------------------------
-
-//  지금 처리 중인 HTTP 요청
-    private HttpServletRequest currentRequest(){
-        RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
-        if (attributes instanceof ServletRequestAttributes servletAttributes) {
-            return servletAttributes.getRequest();
-        }
-        return null;
-    }
-
-//  쿠키 값 꺼내기
-    private String cookieValue(HttpServletRequest request, String name){
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null) { return null; }
-        for (Cookie cookie : cookies) {
-            if (name.equals(cookie.getName())) { return cookie.getValue(); }
-        }
-        return null;
-    }
-
-//  접속 IP : 프록시(Vite , cloudflared)를 거치면 X-Forwarded-For 첫 값이 실제 IP
-    private String clientIp(HttpServletRequest request){
-        String forwarded = request.getHeader("X-Forwarded-For");
-        String ip = (forwarded != null && !forwarded.isBlank())
-            ? forwarded.split(",")[0].trim()
-            : request.getRemoteAddr();
-
-        if (ip.startsWith("::ffff:")) { ip = ip.substring(7); }                        // IPv6 로 표기된 IPv4
-        if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) { ip = "127.0.0.1"; }    // 내 컴퓨터(localhost)
-        return ip;
-    }
-
-//  주소의 {번호} → " (#12)"  (번호가 없으면 빈 문자열)
-    @SuppressWarnings("unchecked")
-    private String pathNumber(HttpServletRequest request){
-        Object variables = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
-        if (variables instanceof Map<?, ?> map && !map.isEmpty()) {
-            return " (#" + ((Map<String, String>) map).values().iterator().next() + ")";
-        }
-        return "";
-    }
-
-//  주소의 {이름} 값 (예: /api/authorization/{memberId}/role 의 memberId)
-    private String pathValue(HttpServletRequest request, String name){
-        Object variables = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
-        if (variables instanceof Map<?, ?> map && map.get(name) != null) {
-            return map.get(name).toString();
-        }
-        return null;
-    }
-
-//  거절 / 반려 사유 : 주소의 ?rejectReason= → 요청 body 의 rejectReason → " - 사유: ..." (사유가 없으면 빈 문자열)
-    private String rejectReasonText(HttpServletRequest request, Object[] args){
-        String reason = request.getParameter(REJECT_REASON_FIELD);
-        if (reason == null || reason.isBlank()) {
-            Object value = readField(args, REJECT_REASON_FIELD);
-            reason = (value == null) ? null : value.toString();
-        }
-        return (reason == null || reason.isBlank()) ? "" : " - 사유: " + reason;
-    }
-
-//  컨트롤러 메소드 인자(요청 body DTO , Map)에서 필드 값 꺼내기
-//  → 특정 DTO 클래스를 몰라도 getXxx() 가 있으면 읽음 (팀원 DTO 가 바뀌어도 이름만 같으면 동작)
-    private Object readField(Object[] args, String fieldName){
-        String getterName = "get" + Character.toUpperCase(fieldName.charAt(0)) + fieldName.substring(1);
-
-        for (Object arg : args) {
-            if (arg == null || arg instanceof ServletRequest || arg instanceof ServletResponse) { continue; }
-
-            if (arg instanceof Map<?, ?> map) {
-                if (map.get(fieldName) != null) { return map.get(fieldName); }
-                continue;
-            }
-
-            try {
-                Method getter = arg.getClass().getMethod(getterName);
-                Object value = getter.invoke(arg);
-                if (value != null) { return value; }
-            } catch (ReflectiveOperationException e) {
-                // 이 인자에는 해당 필드가 없음 → 다음 인자 확인
-            }
-        }
-        return null;
-    }
-
-    private String valueOrDash(Object value){
-        return (value == null) ? "-" : value.toString();
     }
 
 }

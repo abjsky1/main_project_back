@@ -28,7 +28,7 @@ import main_project.model.repository.MemberRepository;
 public class AuditService {
 
 //  비회원(로그인 안 한 손님 , 미가입 이메일 로그인 시도 등) 로그를 연결할 공통 계정
-//  → member 테이블에 'GUEST' 행이 있어야 함 (MainDBSampleData.sql 맨 아래)
+//  → member 테이블에 'GUEST' 행이 있어야 함 (MainDBSampleData.sql 의 member INSERT 맨 끝 줄)
     public static final String GUEST_MEMBER_ID = "GUEST";
 
 //  action_detail 컬럼 길이 (AuditEntity 와 같게)
@@ -66,7 +66,7 @@ public class AuditService {
     }
 
 
-//  감사 로그 1건 저장 (AuditAspect 가 호출)
+//  감사 로그 1건 저장 (AOP 인 audit/AuditAspect 가 요청마다 호출)
     public void record(AuditSaveDto auditSaveDto){
 
     //  1. 작업 유형 이름 → action_id  (action 테이블에 없는 이름이면 저장하지 않고 경고만)
