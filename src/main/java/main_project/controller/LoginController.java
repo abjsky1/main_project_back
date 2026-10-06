@@ -40,18 +40,34 @@ public class LoginController {
         String refreshToken = jwtUtil.createRefreshToken(result.getMemberId());
 
         // 4. Access Token을 쿠키에 저장
-        ResponseCookie cookie = ResponseCookie
-                                .from("login_member", accessToken)
+        ResponseCookie accesscookie = ResponseCookie
+                                .from("AccessToken", accessToken)
                                 .path("/")
-                                .maxAge(Duration.ofDays(1))
+                                .maxAge(Duration.ofMinutes(20))
                                 .httpOnly(true)
                                 .secure(false)
                                 .sameSite("Lax")
                                 .build();
+
+
+        // 5. Refresh Token을 쿠키에 저장
+        ResponseCookie refreshcookie = ResponseCookie
+                                .from("RefreshToken", refreshToken)
+                                .path("/")
+                                .maxAge(Duration.ofDays(7))
+                                .httpOnly(true)
+                                .secure(false)
+                                .sameSite("Lax")
+                                .build(); 
+
+        // 6. Refresh Token Redis 저장
+        redisTokenService.setRefreshToken(result.getMemberId(), refreshToken);
+
         // 5. 응답 Header에 쿠키 등록
-        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, accesscookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshcookie.toString());
+
         return result;  
-        
     }
 
     @PostMapping ("/logout")
@@ -59,7 +75,7 @@ public class LoginController {
 
         // 로그인 때 생성한 login_member 쿠키를 같은 이름으로 다시 만들고 유효시간을 0으로 설정
         ResponseCookie cookie = ResponseCookie
-                    .from("login_member" , "")
+                    .from("AccessToken" , "")
                     .path("/")
                     .maxAge(0)
                     .httpOnly(true)
