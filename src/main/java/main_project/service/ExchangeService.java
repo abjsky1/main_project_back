@@ -72,10 +72,7 @@ public class ExchangeService {
         return list;
     }
 
-    private void readCsv(
-            int year,
-            Map<String, List<BigDecimal>> groups
-    ) {
+    private void readCsv( int year, Map<String, List<BigDecimal>> groups ) {
         String fileName = "static/exchange_rate/exchange_rate_" + year + ".csv";
         ClassPathResource resource = new ClassPathResource(fileName);
 
