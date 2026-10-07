@@ -1,22 +1,21 @@
 package main_project.model.dto;
 
 import java.math.BigDecimal;
-import java.util.Map;
-
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@AllArgsConstructor 
-@NoArgsConstructor 
-@Data 
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder 
-@JsonIgnoreProperties(ignoreUnknown = true) //rate,response,base,date 필드는 무시 
+@Data 
 public class ExchangerateDto {
-
-    private Map<String, BigDecimal> rates;
-
+    // 통화 코드
+    private String currency;
+    // 환율
+    private BigDecimal money;
+    // 전일 대비 증감율
+    private BigDecimal inderate;
 }
