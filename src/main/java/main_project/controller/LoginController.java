@@ -4,6 +4,7 @@ import java.time.Duration;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,19 +28,22 @@ public class LoginController {
     private final RedisTokenService redisTokenService;
 
     @PostMapping
-    public MemberEntity login(@RequestBody LoginDto loginDto , HttpServletResponse response) {
+    public boolean login(@RequestBody LoginDto loginDto , HttpServletResponse response) {
         
-        // 1. 서비스에게 로그인 검증 요청
+        // 1. 서비스에게 로그인 검증 요청 
         MemberEntity result = loginService.login(loginDto);
 
-        // 2. 로그인 실패시 null 반환
-        if (result == null) { return null;}
+        // 2. 로그인 실패
+        if (result == null) {return false;}
 
+        try{
         // 3. 로그인 성공시 memberId를 이용해서 JWT Access token 생성
         String accessToken = jwtUtil.createAccessToken(result.getMemberId());
         String refreshToken = jwtUtil.createRefreshToken(result.getMemberId());
 
-        // 4. Access Token을 쿠키에 저장
+    
+
+           // 4. Access Token을 쿠키에 저장
         ResponseCookie accesscookie = ResponseCookie
                                 .from("AccessToken", accessToken)
                                 .path("/")
@@ -63,18 +67,32 @@ public class LoginController {
         // 6. Refresh Token Redis 저장
         redisTokenService.setRefreshToken(result.getMemberId(), refreshToken);
 
-        // 5. 응답 Header에 쿠키 등록
+        // 7. 응답 Header에 쿠키 등록
         response.addHeader(HttpHeaders.SET_COOKIE, accesscookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshcookie.toString());
 
-        return result;  
+
+    //  교수님 질문 : 쿠키 저장됐는지 검증하고 boolean 반환하는 방법.
+        return true; } catch ( Exception e ) { e.printStackTrace(); return false;}
     }
 
     @PostMapping ("/logout")
-    public boolean logout(HttpServletResponse response) {
+    public boolean logout(@CookieValue(value = "AccessToken", required = false) String accessToken, HttpServletResponse response) {
 
-        // 로그인 때 생성한 login_member 쿠키를 같은 이름으로 다시 만들고 유효시간을 0으로 설정
-        ResponseCookie cookie = ResponseCookie
+        // 1. AcessToken이 존재하는 경우
+        if (accessToken != null) {
+
+        // 2. AccessToken 에서 memberId 추출
+        String memberId = jwtUtil.getMemberIdFromToken(accessToken);
+
+        // 3. memberId가 정상적으로 추출 -> Redis의 RefreshToken 삭제
+        if (memberId != null) {
+            redisTokenService.deleteRefreshToken(memberId);
+        }
+}
+
+        // 로그인 때 생성한 login_member 쿠키를 같은 이름으로 다시 만들고 유효시간을 0으로 설정 (AccessToken 쿠키 삭제)
+        ResponseCookie accesscookie = ResponseCookie
                     .from("AccessToken" , "")
                     .path("/")
                     .maxAge(0)
@@ -82,8 +100,23 @@ public class LoginController {
                     .secure(false)
                     .sameSite("Lax")
                     .build();
-        // 쿠키 삭제 명령 전달
-        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        // 로그인 때 생성한 login_member 쿠키를 같은 이름으로 다시 만들고 유효시간을 0으로 설정 (RefreshToken 쿠키 삭제)
+        ResponseCookie refreshcookie = ResponseCookie
+                    .from("RefreshToken" , "")
+                    .path("/")
+                    .maxAge(0)
+                    .httpOnly(true)
+                    .secure(false)
+                    .sameSite("Lax")
+                    .build();
+
+        // 브라우저에게 쿠키 만료 응답 헤더 전달
+        response.addHeader(HttpHeaders.SET_COOKIE, accesscookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshcookie.toString());
         return true;
+
+
     }
 }
+
