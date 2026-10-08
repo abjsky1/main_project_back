@@ -54,6 +54,10 @@ public class AuditTargets {
         add("POST",   "/api/matching/logistics/reject/{matchingId}",  "매칭 거절",            "물류 매칭 거절");
     //  (거절 / 반려 요청에 rejectReason 이 있으면 AuditDetailMaker 가 " - 사유: ..." 를 자동으로 붙임)
 
+    //  ---------- 마이페이지 ----------
+        add("PUT",    "/api/mypage/{memberId}", "기업 정보 수정", "회원 정보 수정 (이름·주소)");
+    //  (관심 국가 추가·삭제 /api/interest 는 action 테이블에 맞는 작업 유형이 없어서 등록 안 함)
+
     //  ---------- 사용자 권한 관리 (시스템 관리) ----------
         add("PUT",    "/api/authorization/{memberId}/role",   "사용자 권한 변경", "사용자 권한 변경");
         add("PUT",    "/api/authorization/{memberId}/status", "사용자 상태 변경", "사용자 상태 변경");
