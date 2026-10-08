@@ -11,7 +11,8 @@ INSERT INTO signup (signup_id, signup_type, created_at, updated_at) VALUES
 (101, '관리자', NOW(), NOW()),
 (201, '수출입기업', NOW(), NOW()),
 (301, '물류운송업체', NOW(), NOW()),
-(401, '비회원', NOW(), NOW());
+(401, '비회원', NOW(), NOW()),
+(501, '탈퇴 회원', NOW(), NOW());
 
 -- 작업유형 테이블 (action) : 이름은 audit/AuditTargets 등록표와 글자까지 같아야 함
 INSERT INTO action (action_id, action_type, created_at, updated_at) VALUES
@@ -254,7 +255,10 @@ INSERT INTO member (member_id, signup_id, user_email, user_password, company_nam
 ('ce3d3857-a1f1-4544-918e-58944d2c003f', 101, 'admin@naver.com', '$2y$10$ZRdR2V/fDJU70JhwVDcpV.vN6iyzeaBRuuX.fDvoGFUoQOoL2kGZO', '관리자', '김길리', '123-45-67890', '02-123-4567', '서울특별시 동해물과 백두산이', NOW(), NOW(), 2, TRUE),
 -- 비회원 공통 계정 (로그인 안 한 손님 , 미가입 이메일 로그인 시도 등의 감사 로그를 연결)
 -- password '-' 는 BCrypt 값이 아니고 status FALSE 라서 로그인 불가 , 사용자 권한 관리 목록에서는 제외 (MemberRepository.searchWithRole)
-('GUEST', 401, 'guest@macross.local', '-', '비회원', '비회원', '-', '-', '-', NOW(), NOW(), 1, FALSE);
+('GUEST', 401, 'guest@macross.local', '-', '비회원', '비회원', 'GUEST', '-', '-', NOW(), NOW(), 1, FALSE),
+-- 탈퇴 회원 공통 계정 : 회원 탈퇴(삭제) 때 그 회원의 감사 로그를 이 계정으로 옮겨서 로그만 남김 (AuditService.WITHDRAWN_MEMBER_ID)
+-- 비밀번호 '-' 와 status FALSE 라서 로그인 불가 , 사업자번호는 UNIQUE 라서 GUEST 와 다른 값
+('WITHDRAWN', 501, 'withdrawn@macross.local', '-', '탈퇴 회원', '탈퇴 회원', 'WITHDRAWN', '-', '-', NOW(), NOW(), 1, FALSE);
 
 
 -- 2-1. 화주사 매칭 요청 (cscore1)

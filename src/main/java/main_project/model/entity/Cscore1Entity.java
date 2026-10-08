@@ -1,5 +1,9 @@
 package main_project.model.entity;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -8,11 +12,15 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Table(name = "cscore1")
@@ -52,4 +60,30 @@ public class Cscore1Entity extends BaseTime {
     @Builder.Default
     @Column(name = "matching_agree" , nullable = false)
     private Boolean matchingAgree = false;
+
+
+//  ---------- 회원 탈퇴로 이 조건이 삭제될 때 같이 지울 자식 데이터 ----------
+//  (MemberEntity 의 cscore1Entities 에서 이어지는 cascade — 회원 → 조건 1번 → 아래 3가지)
+//  mappedBy = "cscore1Entity" : 자식 엔티티의 cscore1Entity 칸이 FK(cscore1_id) 를 가지고 있다는 뜻 (DB 칸 추가 없음)
+//  cascade = CascadeType.REMOVE : 이 조건이 삭제되면 자식도 같이 삭제
+//  ※ 조건 삭제 API(DELETE /api/cscore/{id})는 지금처럼 Service 가 2·3번을 먼저 지우고 , 매칭 결과가 있으면 삭제를 막음 (동작 변화 없음)
+
+    // 2번 조건 (물량 · 일정) — 조건 1개에 1개
+    @OneToOne(mappedBy = "cscore1Entity", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Cscore2Entity cscore2Entity;
+
+    // 3번 조건 (화물 특성) — 조건 1개에 1개
+    @OneToOne(mappedBy = "cscore1Entity", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Cscore3Entity cscore3Entity;
+
+    // 이 조건으로 만들어진 매칭 결과 (matching)
+    @OneToMany(mappedBy = "cscore1Entity", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @Builder.Default
+    private List<MatchingEntity> matchingEntities = new ArrayList<>();
 }
