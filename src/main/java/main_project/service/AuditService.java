@@ -31,6 +31,10 @@ public class AuditService {
 //  → member 테이블에 'GUEST' 행이 있어야 함 (MainDBSampleData.sql 의 member INSERT 맨 끝 줄)
     public static final String GUEST_MEMBER_ID = "GUEST";
 
+//  탈퇴한 회원의 로그를 옮겨 붙일 공통 계정 (회원은 삭제해도 로그는 남기기 위해)
+//  → member 테이블에 'WITHDRAWN' 행이 있어야 함 (MainDBSampleData.sql 의 member INSERT 맨 끝 줄)
+    public static final String WITHDRAWN_MEMBER_ID = "WITHDRAWN";
+
 //  action_detail 컬럼 길이 (AuditEntity 와 같게)
     private static final int DETAIL_MAX_LENGTH = 300;
 
@@ -52,11 +56,8 @@ public class AuditService {
         List<AuditEntity> auditEntities = auditRepository.search(blankToNull(user), blankToNull(action), result);
 
     //  2. 엔티티 → DTO 로 변환
-        return auditEntities.stream().map((auditEntity)->{
-
-            return AuditDto.from(auditEntity);
-
-        }).toList();
+        return auditEntities.stream().map( (auditEntity) -> { return AuditDto.from(auditEntity); } ).toList();
+        
     }
 
 
@@ -76,10 +77,15 @@ public class AuditService {
             return;
         }
 
-    //  2. 회원 찾기 : 회원 번호가 없거나 DB 에 없는 회원이면 비회원(GUEST)
+    //  2. 회원 찾기
+    //     - 회원 번호가 없으면 → 비회원(GUEST)
+    //     - 회원 번호는 있는데 DB 에 없으면 → 방금 탈퇴(삭제)한 회원(WITHDRAWN)
+    //       (회원 탈퇴 요청은 쿠키 속 회원 번호로 기록되는데 , 기록하는 시점에는 이미 회원이 삭제되어 있음)
         String memberId = auditSaveDto.getMemberId();
-        if (memberId == null || !memberRepository.existsById(memberId)) {
+        if (memberId == null) {
             memberId = GUEST_MEMBER_ID;
+        } else if (!memberRepository.existsById(memberId)) {
+            memberId = WITHDRAWN_MEMBER_ID;
         }
 
     //  3. 대상 문구가 컬럼 길이(300)를 넘으면 자르기
@@ -136,6 +142,10 @@ public class AuditService {
 
         if (!memberRepository.existsById(GUEST_MEMBER_ID)) {
             log.warn("[감사로그] 비회원 계정('{}')이 member 테이블에 없음 → 비회원 로그가 저장되지 않습니다", GUEST_MEMBER_ID);
+        }
+
+        if (!memberRepository.existsById(WITHDRAWN_MEMBER_ID)) {
+            log.warn("[감사로그] 탈퇴 회원 계정('{}')이 member 테이블에 없음 → 회원 탈퇴가 실패합니다", WITHDRAWN_MEMBER_ID);
         }
     }
 
