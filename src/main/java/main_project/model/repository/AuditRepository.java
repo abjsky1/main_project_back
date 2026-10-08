@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -57,5 +58,18 @@ public interface AuditRepository extends JpaRepository<AuditEntity,Integer>{
            "AND (:result IS NULL OR a.actionResult = :result) " +
            "ORDER BY a.createdAt DESC, a.auditId DESC")
     List<AuditEntity> search(@Param("user") String user, @Param("action") String action, @Param("result") Boolean result);
+
+//  회원 1명의 감사 로그를 다른 회원(탈퇴 회원 공통 계정)으로 한 번에 옮기기 — 회원 탈퇴에서 사용
+//  - 로그가 몇 건이든 UPDATE 쿼리 1번 (로그를 자바로 가져와서 한 건씩 바꾸면 로그 수만큼 UPDATE 가 실행됨)
+//  - nativeQuery = true : MySQL 쿼리를 그대로 씀 → 엔티티 이름(AuditEntity) 대신 테이블 이름(audit) ,
+//                         필드 이름(memberEntity) 대신 컬럼 이름(member_id)
+//  - :toMemberId , :fromMemberId : 아래 @Param("이름") 과 같은 이름의 값이 들어가는 자리 (두 이름이 똑같아야 연결됨)
+//                                  문자열을 직접 이어 붙이지 않아서 SQL 인젝션도 막아 줌
+//  - @Modifying : SELECT 가 아니라 데이터를 바꾸는 쿼리라는 표시 (UPDATE / DELETE 쿼리에 꼭 필요)
+//  - 돌려주는 int : 바뀐 줄 수 (= 옮긴 로그 건수)
+//  ⚠️ 네이티브 쿼리는 테이블 · 컬럼 이름을 틀려도 서버가 켜질 때 알려주지 않음 → 이 쿼리가 실행될 때(회원 탈퇴할 때) 오류가 남
+    @Modifying
+    @Query(value = "UPDATE audit SET member_id = :toMemberId WHERE member_id = :fromMemberId", nativeQuery = true)
+    int moveLogs(@Param("fromMemberId") String fromMemberId, @Param("toMemberId") String toMemberId);
 
 }

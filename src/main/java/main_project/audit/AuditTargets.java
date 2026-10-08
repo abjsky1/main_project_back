@@ -56,6 +56,8 @@ public class AuditTargets {
 
     //  ---------- 마이페이지 ----------
         add("PUT",    "/api/mypage/{memberId}", "기업 정보 수정", "회원 정보 수정 (이름·주소)");
+        add("POST",   "/api/mypage/withdraw",   "회원 탈퇴",      "회원 탈퇴");
+    //  (탈퇴에 성공하면 회원이 이미 삭제된 뒤라서 , 이 로그는 "탈퇴 회원" 공통 계정으로 기록됨 — AuditService.record)
     //  (관심 국가 추가·삭제 /api/interest 는 action 테이블에 맞는 작업 유형이 없어서 등록 안 함)
 
     //  ---------- 사용자 권한 관리 (시스템 관리) ----------
@@ -70,7 +72,7 @@ public class AuditTargets {
         add("GET", "/api/cumulative/trade",           "데이터 조회", "누적 무역 현황 조회");
         add("GET", "/api/exchangerate/nation",        "데이터 조회", "국가별 환율 조회");
         add("GET", "/api/today/exchangerate",         "데이터 조회", "당일 환율 조회");
-        add("GET", "/month",                          "데이터 조회", "월별 환율 조회");
+        add("GET", "/api/exchange/month",             "데이터 조회", "월별 환율 조회");
         add("GET", "/api/authorization",              "데이터 조회", "사용자 권한 관리 목록 조회");
 
     //  ※ 일부러 등록 안 한 것
