@@ -36,6 +36,8 @@ public class MemberDto {
 
     private RoleEntity roleEntity;
 
+
+    // DTO -> Entity
     public MemberEntity toEntity() {
 
         return MemberEntity.builder()
