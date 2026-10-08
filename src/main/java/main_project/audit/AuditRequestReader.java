@@ -14,6 +14,7 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import main_project.model.dto.MemberDto;
 import main_project.model.entity.MemberEntity;
 import main_project.model.repository.MemberRepository;
 import main_project.util.JwtUtil;
@@ -191,9 +192,9 @@ public class AuditRequestReader {
 
     //  ① 방금 로그인에 성공한 경우 : LoginController 가 돌려준 회원 정보
     //     (로그인하는 순간에는 아직 출입증 쿠키가 없어서 이렇게 찾음)
-        if (result instanceof MemberEntity) {
-            MemberEntity memberEntity = (MemberEntity) result;
-            return memberEntity.getMemberId();
+        if (result instanceof MemberDto) {
+            MemberDto memberDto = (MemberDto) result;
+            return memberDto.getMemberId();
         }
 
     //  ② 로그인한 상태 : 출입증(JWT) 쿠키에서 회원 번호 읽기 (만료되었거나 가짜면 null)
