@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import main_project.model.dto.MypageDto;
+import main_project.model.dto.PasswordChangeDto;
 import main_project.model.entity.MemberEntity;
 import main_project.model.repository.AuditRepository;
 import main_project.model.repository.MemberRepository;
@@ -68,14 +69,72 @@ public class MypageService {
     }
 
 
+//  비밀번호 변경 , 성공하면 true
+//  흐름 : 쿠키 확인 → 입력값 검사 → 쿠키로 본인 확인 → 현재 비밀번호 확인 → 새 비밀번호를 BCrypt 로 암호화해서 저장
+//  (현재 비밀번호 확인은 LoginService , 암호화 저장은 SignupService 와 같은 방법)
+//
+//  ※ 검사 순서 : 싼 검사 → 비싼 작업 (잘못된 값은 DB · BCrypt 까지 가기 전에 빨리 끝냄)
+//    - 1 · 2번 (쿠키 · 입력값) : 자바 안에서 바로 끝나는 검사 → 거의 0ms
+//    - 4번 (DB 조회)            : 약 1~2ms
+//    - 5 · 6번 (BCrypt matches) : 1번에 약 100ms (해킹을 막으려고 일부러 느리게 만든 암호화)
+    public boolean changePassword(String accessToken, PasswordChangeDto passwordChangeDto) {
+
+        // 1. 쿠키가 없으면 비로그인 → 실패
+        if (accessToken == null) { return false; }
+
+        // 2. 입력값 확인
+        String currentPassword = passwordChangeDto.getCurrentPassword();
+        String newPassword = passwordChangeDto.getNewPassword();
+
+        //    2-1. 둘 다 입력했는지
+        if (currentPassword == null || currentPassword.isEmpty()) { return false; }
+        if (newPassword == null || newPassword.isEmpty()) { return false; }
+
+        //    2-2. 새 비밀번호 길이 : 6 ~ 20자
+        //         - 6자 이상 : 회원가입 화면과 같은 규칙
+        //         - 20자 이하 : BCrypt 는 앞 72바이트까지만 사용함 (한글 1자 = 3바이트 → 20자여도 60바이트라 안전)
+        if (newPassword.length() < 6 || newPassword.length() > 20) { return false; }
+
+        // 3. 쿠키 속 토큰에서 회원 번호 꺼내기 (만료 · 가짜 토큰이면 null)
+        //    ※ 바꿀 회원은 주소나 body 가 아니라 쿠키로만 정함 → 다른 사람의 비밀번호는 바꿀 수 없음
+        String memberId = jwtUtil.getMemberIdFromToken(accessToken);
+        if (memberId == null) { return false; }
+
+        // 4. 회원 조회 (없는 회원이면 실패)
+        MemberEntity memberEntity = memberRepository.findById(memberId).orElse(null);
+        if (memberEntity == null) { return false; }
+
+        // 5. 현재 비밀번호 확인 (LoginService 의 로그인 검증과 같은 방법)
+        //    passwordEncoder.matches( 입력한 비밀번호(평문) , DB 에 저장된 비밀번호(암호문) ) → 같으면 true
+        boolean currentMatch = passwordEncoder.matches(currentPassword, memberEntity.getUserPassword());
+        if (currentMatch == false) { return false; }
+
+        // 6. 새 비밀번호가 지금 비밀번호와 같으면 바꿀 의미가 없으므로 실패
+        //    ※ encode(newPassword).equals(DB 암호문) 으로는 비교할 수 없음
+        //      BCrypt 는 encode 할 때마다 무작위 값(솔트)을 섞어서 , 같은 비밀번호여도 암호문이 매번 다름
+        //      matches 는 DB 암호문 안에 들어 있는 솔트를 꺼내 입력값을 같은 솔트로 암호화한 뒤 비교함 → 그래서 matches 로 비교
+        boolean sameAsCurrent = passwordEncoder.matches(newPassword, memberEntity.getUserPassword());
+        if (sameAsCurrent == true) { return false; }
+
+        // 7. 새 비밀번호를 암호화해서 저장 (SignupService 의 회원가입과 같은 방법)
+        //    passwordEncoder.encode( 평문 ) → 암호문 (같은 비밀번호여도 encode 할 때마다 다른 암호문이 나옴 — 그래서 비교는 matches 로)
+        //    setter 로 바꾸면 트랜잭션이 끝날 때 JPA 가 UPDATE 해줌 (dirty checking)
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        memberEntity.setUserPassword(encodedPassword);
+
+        return true;
+    }
+
+
 //  회원 탈퇴 , 성공하면 true
 //  - 회원은 DB 에서 삭제 → 매칭 조건 · 매칭 결과 · 관심 국가는 cascade 로 같이 삭제 (MemberEntity 아래쪽 참고)
 //  - 감사 로그만 "탈퇴 회원" 공통 계정으로 옮겨서 남김
 //  - 쿠키 · 레디스 토큰 삭제는 컨트롤러가 함 (이 메소드가 성공해서 DB 삭제가 끝난 뒤에)
     public boolean withdraw(String accessToken, String userPassword) {
 
-        // 1. 쿠키가 없으면 비로그인 → 실패
+        // 1. 쿠키가 없거나 비밀번호를 입력하지 않았으면 실패 (DB 조회 전에 빨리 끝냄 — changePassword 와 같은 순서)
         if (accessToken == null) { return false; }
+        if (userPassword == null || userPassword.isEmpty()) { return false; }
 
         // 2. 쿠키 속 토큰에서 회원 번호 꺼내기 (만료 · 가짜 토큰이면 null)
         //    ※ 탈퇴할 회원은 주소나 body 가 아니라 쿠키로만 정함 → 다른 사람의 계정은 탈퇴시킬 수 없음
@@ -92,8 +151,6 @@ public class MypageService {
         // 5. 비밀번호 확인 (LoginService 의 로그인 검증과 같은 방법)
         //    passwordEncoder.matches( 입력한 비밀번호(평문) , DB 에 저장된 비밀번호(암호문) )
         //    → BCrypt 는 암호문을 다시 평문으로 되돌릴 수 없어서 , 입력값을 같은 방식으로 암호화해 비교함
-        if (userPassword == null || userPassword.isEmpty()) { return false; }
-
         boolean passwordMatch = passwordEncoder.matches(userPassword, memberEntity.getUserPassword());
         if (passwordMatch == false) { return false; }
 
