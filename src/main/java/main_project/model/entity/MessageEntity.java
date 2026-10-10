@@ -67,7 +67,8 @@ public class MessageEntity {
     //  - SYSTEM : "시스템" (사람이 보낸 게 아니지만 빈칸 없이 채움 → 모든 메시지에 이름이 있어서 NOT NULL)
     //  - FK(회원 번호)가 아니라 이름 글자를 복사하는 이유 :
     //      상담원의 이름 · 권한이 나중에 바뀌어도 기록은 그대로 , 회원이 지워져도 FK 문제 없음
-    //  ※ 회원 화면에는 상담원 이름 대신 "고객센터" 로만 보여줌 (프론트에서 처리)
+    //  ※ 회원 화면에는 상담원 이름 대신 "고객센터" 로만 보여줌
+    //    (ChatService 가 회원에게 보낼 때 바꿔서 보냄 → 상담원 이름이 회원 브라우저에 아예 전달되지 않음)
     @Column(name = "sender_name", nullable = false, length = 50)
     private String senderName;
 
