@@ -60,6 +60,8 @@ dependencies {
 // Reids 의존성
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+// 	11. WebSocket + STOMP (고객센터 채팅 - springweb day062 와 같은 라이브러리)
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
 }
 
