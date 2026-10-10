@@ -1,3 +1,4 @@
+
 package main_project.model.entity;
 
 import jakarta.persistence.Column;
@@ -9,17 +10,20 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "matching")
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+
+// [수정] 동일한 화주 조건과 물류기업 조건의 중복 매칭 방지
+@Table( name = "matching" )
+@AllArgsConstructor 
+@NoArgsConstructor 
+@Builder 
+@Data 
 public class MatchingEntity extends BaseTime {
 
     @Id
@@ -59,7 +63,8 @@ public class MatchingEntity extends BaseTime {
     @Column(name = "total_score" , nullable = false)
     private Integer totalScore = 0;
 
-    // 관리자 검토 상태 (pending : 대기중)
+    // 관리자 검토 상태
+    // [수정] A방식에서는 사용하지 않지만 기존 DB 및 DTO 호환을 위해 유지
     @Builder.Default
     @Column(name = "admin_status", nullable = false, length = 20)
     private String adminStatus = "PENDING";
@@ -86,5 +91,5 @@ public class MatchingEntity extends BaseTime {
     @Builder.Default
     @Column(name = "warning_message", length = 300 , nullable = false)
     private String warningMessage = "-";
-    
+
 }

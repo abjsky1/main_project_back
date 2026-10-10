@@ -11,6 +11,7 @@ import main_project.model.dto.Lscore1Dto;
 import main_project.model.dto.Lscore2Dto;
 import main_project.model.dto.Lscore3Dto;
 import main_project.model.entity.Lscore1Entity;
+import main_project.model.entity.Cscore1Entity;
 import main_project.model.entity.Lscore2Entity;
 import main_project.model.entity.Lscore3Entity;
 import main_project.model.entity.MatchingEntity;
@@ -20,6 +21,7 @@ import main_project.model.repository.Lscore2Repository;
 import main_project.model.repository.Lscore3Repository;
 import main_project.model.repository.MatchingRepository;
 import main_project.model.repository.MemberRepository;
+import main_project.model.repository.Cscore1Repository;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +36,9 @@ public class Lscore1Service {
     private final MemberRepository memberRepository;
 
     private final MatchingRepository matchingRepository;
+
+    private final MatchingService matchingService;
+    private final Cscore1Repository cscore1Repository;
 
     // [1] 물류업체 매칭 조건 등록
     @Transactional
@@ -52,6 +57,13 @@ public class Lscore1Service {
 
         }
 
+
+        // [추가] 비활성 물류기업 회원은 매칭 조건 등록 불가
+        if (memberEntity.getStatus() == null || memberEntity.getStatus() == false) {
+
+            return false;
+
+        }
 
         // 2. 물류업체의 기본 매칭 조건(Lscore1) 저장
         Lscore1Entity lscore1Entity = lscore1Dto.toEntity(memberEntity);
@@ -82,6 +94,16 @@ public class Lscore1Service {
         if (savedLscore2.getLscore2Id() != null &&
             savedLscore3.getLscore3Id() != null) {
 
+            // 화주가 먼저 조건을 등록했어도 신규 물류기업 등록 시 추천 후보를 다시 찾음
+            if (savedLscore1.getMatchingAgree() != null && savedLscore1.getMatchingAgree() == true) {
+                for (Cscore1Entity c : cscore1Repository.findByMatchingAgreeTrue()) {
+                    // 활성 상태의 화주만 자동 매칭 재검사
+                    if (c.getMemberEntity().getStatus() != null
+                            && c.getMemberEntity().getStatus() == true) {
+                        matchingService.matchingWrite(c.getCscore1Id());
+                    }
+                }
+            }
             return true;
 
         }
@@ -206,20 +228,25 @@ public class Lscore1Service {
 
         }
 
-        // 2. Matching 전체 조회
-        List<MatchingEntity> matchingEntities = matchingRepository.findAll();
+        // 2. 해당 물류기업 조건의 매칭 결과만 조회
+        List<MatchingEntity> matchingEntities = matchingRepository.findByLscore1EntityLscore1Id(lscore1Id);
 
-        // 3. 삭제하려는 Lscore1이 이미 매칭에 사용되었는지 확인
+        // 3. 요청/완료/거절된 매칭은 삭제 불가, 자동 추천 후보만 삭제 가능
         for (MatchingEntity matchingEntity : matchingEntities) {
 
-            if (matchingEntity.getLscore1Entity().getLscore1Id().equals(lscore1Id)) {
-
-                // 이미 매칭된 조건이면 삭제하지 않고 false 반환
+            if (!"PENDING".equals(matchingEntity.getFinalStatus())
+                    || !"WAITING".equals(matchingEntity.getShipperStatus())
+                    || !"WAITING".equals(matchingEntity.getLogisticsStatus())) {
                 return false;
-
             }
-
         }
+
+        // 4. 상태가 변경되지 않은 자동 추천 후보는 먼저 삭제
+        for (MatchingEntity matchingEntity : matchingEntities) {
+            matchingRepository.delete(matchingEntity);
+        }
+
+        matchingRepository.flush();
 
         // 4. Lscore1과 연결된 Lscore2 조회
         Lscore2Entity lscore2Entity = lscore2Repository.findByLscore1Entity(lscore1Entity).orElse(null);

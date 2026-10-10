@@ -1,31 +1,51 @@
 package main_project.service;
 
 import java.util.ArrayList;
+
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
+
 import lombok.RequiredArgsConstructor;
+
 import main_project.model.dto.MatchingDto;
+
 import main_project.model.entity.Cscore1Entity;
+
 import main_project.model.entity.Cscore2Entity;
+
 import main_project.model.entity.Cscore3Entity;
+
 import main_project.model.entity.Lscore1Entity;
+
 import main_project.model.entity.Lscore2Entity;
+
 import main_project.model.entity.Lscore3Entity;
+
 import main_project.model.entity.MatchingEntity;
+
 import main_project.model.repository.Cscore1Repository;
+
 import main_project.model.repository.Cscore2Repository;
+
 import main_project.model.repository.Cscore3Repository;
+
 import main_project.model.repository.Lscore1Repository;
+
 import main_project.model.repository.Lscore2Repository;
+
 import main_project.model.repository.Lscore3Repository;
+
 import main_project.model.repository.MatchingRepository;
 
-@Service 
-@RequiredArgsConstructor 
+@Service
+
+@RequiredArgsConstructor
+
 @Transactional
+
 public class MatchingService {
 
     private final MatchingRepository matchingRepository;
@@ -43,24 +63,29 @@ public class MatchingService {
     private final Lscore3Repository lscore3Repository;
 
     // [1] 수출입기업(화주)과 물류기업 1차 매칭 조건 확인
-    public boolean matchingCheck( Integer cscore1Id , Integer lscore1Id ) {
+
+    public boolean matchingCheck(Integer cscore1Id, Integer lscore1Id) {
 
         // 1. 수출입기업(화주) 기본 조건 조회
+
         Cscore1Entity cscore1Entity = cscore1Repository.findById(cscore1Id).orElse(null);
 
         if (cscore1Entity == null) {
 
             return false;
-            
+
         }
 
         // 2. 수출입기업(화주)의 요청 물량 및 희망 날짜 조건 조회
+
         Cscore2Entity cscore2Entity = cscore2Repository.findByCscore1Entity(cscore1Entity).orElse(null);
 
         // 3. 수출입기업(화주)의 특수화물 조건 조회
+
         Cscore3Entity cscore3Entity = cscore3Repository.findByCscore1Entity(cscore1Entity).orElse(null);
 
-        // 필요 조건 하나라도 불일치 시 탈락 ( 또는 || )
+        // 필요 조건 하나라도 없으면 탈락
+
         if (cscore2Entity == null || cscore3Entity == null) {
 
             return false;
@@ -68,620 +93,1306 @@ public class MatchingService {
         }
 
         // 4. 물류업체 기본 조건 조회
+
         Lscore1Entity lscore1Entity = lscore1Repository.findById(lscore1Id).orElse(null);
 
         if (lscore1Entity == null) {
 
             return false;
-            
+
         }
 
-        // 5. 물류업체의 가용 물량 및 가능 날짜 조건 조회
+        // 5. 물류업체 가용 물량 및 가능 날짜 조회
+
         Lscore2Entity lscore2Entity = lscore2Repository.findByLscore1Entity(lscore1Entity).orElse(null);
 
-        // 6. 물류업체 특수화물 취급 조건 조회
+        // 6. 물류업체 특수화물 조건 조회
+
         Lscore3Entity lscore3Entity = lscore3Repository.findByLscore1Entity(lscore1Entity).orElse(null);
 
-        // 필요 조건 하나라도 불일치 시 탈락
         if (lscore2Entity == null || lscore3Entity == null) {
 
             return false;
-            
+
         }
 
         // 7. 조회한 데이터를 1차 필터에 전달
+
         return firstFilter(
-            cscore1Entity, cscore2Entity, 
-            cscore3Entity, lscore1Entity, 
-            lscore2Entity, lscore3Entity);
+
+                cscore1Entity,
+
+                cscore2Entity,
+
+                cscore3Entity,
+
+                lscore1Entity,
+
+                lscore2Entity,
+
+                lscore3Entity
+
+        );
 
     }
 
     // [2] 1차 필터 (필수조건 확인)
-    private boolean firstFilter( 
-        Cscore1Entity cscore1Entity ,
-        Cscore2Entity cscore2Entity ,
-        Cscore3Entity cscore3Entity , 
-        Lscore1Entity lscore1Entity , 
-        Lscore2Entity lscore2Entity ,
-        Lscore3Entity lscore3Entity ) {
 
-            // 1. 출발지 일치 여부 
-            if (!cscore1Entity.getDeparture().equals(lscore1Entity.getDeparture())) {
+    private boolean firstFilter(
 
-                return false;
+            Cscore1Entity cscore1Entity,
 
-            }
+            Cscore2Entity cscore2Entity,
 
-            // 2. 도착지 일치 여부
-            if (!cscore1Entity.getArrival().equals(lscore1Entity.getArrival())) {
+            Cscore3Entity cscore3Entity,
 
-                return false;
-                
-            }
+            Lscore1Entity lscore1Entity,
 
+            Lscore2Entity lscore2Entity,
 
-            // 3. 운송방식 일치 여부
-            if (!cscore1Entity.getTransportType().equals(lscore1Entity.getTransportType())) {
-                
-                return false;
+            Lscore3Entity lscore3Entity) {
 
-            }
+        // [추가] 화주 회원 활성 상태 확인
 
-            // 4. 물류업체 가용 물량이 수출입기업 요청 물량 미만일 시 탈락
-            if (lscore2Entity.getAvailableCapacity() < cscore2Entity.getRequestWeight()) {
-                
-                return false;
+        if (cscore1Entity.getMemberEntity().getStatus() == null
+                || cscore1Entity.getMemberEntity().getStatus() == false) {
 
-            }
+            return false;
 
-            // 5. 수출입기업이 냉장/냉동 운송 필요로 하지만 물류업체가 냉장 불가능하면 탈락
-            if (cscore3Entity.getRefrigerated() && !lscore3Entity.getRefrigerated()) {
+        }
 
-                return false;
-                
-            }
+        // [추가] 물류기업 회원 활성 상태 확인
 
-            // 6. 수출입기업이 위험물 운송 필요로 하지만 물류업체가 취급 불가능하면 탈락
-            if (cscore3Entity.getDangerous() && !lscore3Entity.getDangerous()) {
-                
-                return false;
+        if (lscore1Entity.getMemberEntity().getStatus() == null
+                || lscore1Entity.getMemberEntity().getStatus() == false) {
 
-            }
+            return false;
 
-            // 7. 수출입기업이 중량물 운송 필요로 하지만 물류업체가 취급 불가능하면 탈락
-            if (cscore3Entity.getHeavyCargo() && !lscore3Entity.getHeavyCargo()) {
-                
-                return false;
+        }
 
-            }
+        // [추가] 1. 화주 매칭 동의 확인
 
-            // 8. 수출입기업이 특수화물 운송 필요로 하지만 물류업체가 취급 불가능하면 탈락
-            if (cscore3Entity.getSpecialCargo() && !lscore3Entity.getSpecialCargo()) {
+        if (cscore1Entity.getMatchingAgree() == null
 
-                return false;
-                
-            }
+                || cscore1Entity.getMatchingAgree() == false) {
 
-        // 위 조건 해당하지 않을 시 1차 조건 통과
+            return false;
+
+        }
+
+        // [추가] 2. 물류기업 매칭 동의 확인
+
+        if (lscore1Entity.getMatchingAgree() == null
+
+                || lscore1Entity.getMatchingAgree() == false) {
+
+            return false;
+
+        }
+
+        // [추가] 3. 국가 일치 여부
+
+        if (cscore1Entity.getCountryId() == null
+
+                || !cscore1Entity.getCountryId().equals(lscore1Entity.getCountryId())) {
+
+            return false;
+
+        }
+
+        // [추가] 4. 수출입 유형 일치 여부
+
+        if (cscore1Entity.getTradeType() == null
+
+                || !cscore1Entity.getTradeType().equals(lscore1Entity.getTradeType())) {
+
+            return false;
+
+        }
+
+        // 5. 출발지 일치 여부
+
+        if (!cscore1Entity.getDeparture().equals(lscore1Entity.getDeparture())) {
+
+            return false;
+
+        }
+
+        // 6. 도착지 일치 여부
+
+        if (!cscore1Entity.getArrival().equals(lscore1Entity.getArrival())) {
+
+            return false;
+
+        }
+
+        // 7. 운송방식 일치 여부
+
+        if (!cscore1Entity.getTransportType().equals(lscore1Entity.getTransportType())) {
+
+            return false;
+
+        }
+
+        // 8. 물류업체 가용 물량이 화주 요청 물량 미만이면 탈락
+
+        if (lscore2Entity.getAvailableCapacity() < cscore2Entity.getRequestWeight()) {
+
+            return false;
+
+        }
+
+        // [추가] 9. 일반 컨테이너 취급 가능 여부
+
+        if (cscore3Entity.getGeneralContainer()
+
+                && !lscore3Entity.getGeneralContainer()) {
+
+            return false;
+
+        }
+
+        // 10. 냉장/냉동 운송 가능 여부
+
+        if (cscore3Entity.getRefrigerated()
+
+                && !lscore3Entity.getRefrigerated()) {
+
+            return false;
+
+        }
+
+        // 11. 위험물 운송 가능 여부
+
+        if (cscore3Entity.getDangerous()
+
+                && !lscore3Entity.getDangerous()) {
+
+            return false;
+
+        }
+
+        // 12. 중량물 운송 가능 여부
+
+        if (cscore3Entity.getHeavyCargo()
+
+                && !lscore3Entity.getHeavyCargo()) {
+
+            return false;
+
+        }
+
+        // 13. 특수화물 운송 가능 여부
+
+        if (cscore3Entity.getSpecialCargo()
+
+                && !lscore3Entity.getSpecialCargo()) {
+
+            return false;
+
+        }
+
+        // 위 조건에 해당하지 않으면 1차 필터 통과
+
         return true;
 
     }
 
-    // [3] 2치 필터 (매칭 점수 계산)
+    // [3] 2차 필터 (매칭 점수 계산)
+
+    // 아래 5개 점수 계산 기준은 기존 원본 유지
 
     // 1. 루트(노선) 점수 계산 : 30점
+
     private int routeScore(Lscore1Entity lscore1Entity) {
 
         // 정기노선 O + 직항 O : 30점
+
         if (lscore1Entity.getRegularRoute() && lscore1Entity.getDirectRoute()) {
 
             return 30;
-            
+
         }
 
         // 정기노선 O + 직항 X : 25점
+
         if (lscore1Entity.getRegularRoute() && !lscore1Entity.getDirectRoute()) {
 
             return 25;
-            
+
         }
 
         // 정기노선 X + 직항 O : 22점
+
         if (!lscore1Entity.getRegularRoute() && lscore1Entity.getDirectRoute()) {
 
             return 22;
-            
+
         }
-        
+
         // 정기노선 X + 직항 X : 18점
+
         return 18;
 
     }
 
     // 2. 가용 물량 점수 계산 (가용량 ÷ 요청량 × 100)
+
     private Integer capacityScore(
-        Cscore2Entity cscore2Entity ,
-        Lscore2Entity lscore2Entity) {
 
-            double capacityRatio = lscore2Entity.getAvailableCapacity() / cscore2Entity.getRequestWeight() * 100;
+            Cscore2Entity cscore2Entity,
 
-            // 150% 이상 : 25점
-            if (capacityRatio >= 150) {
-                
-                return 25;
+            Lscore2Entity lscore2Entity) {
 
-            }
+        double capacityRatio = lscore2Entity.getAvailableCapacity() / cscore2Entity.getRequestWeight() * 100;
 
-            // 120% 이상 : 23점
-            if (capacityRatio >= 120) {
-                
-                return 23;
+        // 150% 이상 : 25점
 
-            }
+        if (capacityRatio >= 150) {
 
-            // 105% 이상 : 20점
-            if (capacityRatio >= 105) {
+            return 25;
 
-                return 20;
-                
-            }
+        }
 
-            // 100% 이상 : 15점
-            if (capacityRatio >= 100) {
+        // 120% 이상 : 23점
 
-                return 15;
-                
-            }
+        if (capacityRatio >= 120) {
 
-            // 100% 미만은 원래 1차 필터에서 탈락
-            return 0;
+            return 23;
 
-    }
+        }
 
-    // 3. HS CODE 품목 적합도 점수 계산
-    private Integer itemScore(
-            Cscore1Entity cscore1Entity,
-            Lscore1Entity lscore1Entity) {
+        // 105% 이상 : 20점
 
-        // 화주 HS CODE 숫자만 남기기
-        String cHsCode =
-                cscore1Entity.getHsCode().replaceAll("[^0-9]", "");
-
-        // 물류업체 HS CODE 숫자만 남기기
-        String lHsCode =
-                lscore1Entity.getHsCode().replaceAll("[^0-9]", "");
-
-
-        // 10자리 일치 : 20점
-        if (cHsCode.length() >= 10 &&
-            lHsCode.length() >= 10 &&
-            cHsCode.substring(0, 10).equals(lHsCode.substring(0, 10))) {
+        if (capacityRatio >= 105) {
 
             return 20;
 
         }
 
+        // 100% 이상 : 15점
+
+        if (capacityRatio >= 100) {
+
+            return 15;
+
+        }
+
+        // 100% 미만은 1차 필터에서 탈락
+
+        return 0;
+
+    }
+
+    // 3. HS CODE 품목 적합도 점수 계산
+
+    private Integer itemScore(
+
+            Cscore1Entity cscore1Entity,
+
+            Lscore1Entity lscore1Entity) {
+
+        // 화주 HS CODE 숫자만 남기기
+
+        String cHsCode =
+
+                cscore1Entity.getHsCode().replaceAll("[^0-9]", "");
+
+        // 물류업체 HS CODE 숫자만 남기기
+
+        String lHsCode =
+
+                lscore1Entity.getHsCode().replaceAll("[^0-9]", "");
+
+        // 10자리 일치 : 20점
+
+        if (cHsCode.length() >= 10 &&
+
+                lHsCode.length() >= 10 &&
+
+                cHsCode.substring(0, 10).equals(lHsCode.substring(0, 10))) {
+
+            return 20;
+
+        }
 
         // 앞 8자리 일치 : 17점
+
         if (cHsCode.length() >= 8 &&
-            lHsCode.length() >= 8 &&
-            cHsCode.substring(0, 8).equals(lHsCode.substring(0, 8))) {
+
+                lHsCode.length() >= 8 &&
+
+                cHsCode.substring(0, 8).equals(lHsCode.substring(0, 8))) {
 
             return 17;
 
         }
 
-
         // 앞 6자리 일치 : 14점
+
         if (cHsCode.length() >= 6 &&
-            lHsCode.length() >= 6 &&
-            cHsCode.substring(0, 6).equals(lHsCode.substring(0, 6))) {
+
+                lHsCode.length() >= 6 &&
+
+                cHsCode.substring(0, 6).equals(lHsCode.substring(0, 6))) {
 
             return 14;
 
         }
 
-
         // 앞 4자리 일치 : 12점
+
         if (cHsCode.length() >= 4 &&
-            lHsCode.length() >= 4 &&
-            cHsCode.substring(0, 4).equals(lHsCode.substring(0, 4))) {
+
+                lHsCode.length() >= 4 &&
+
+                cHsCode.substring(0, 4).equals(lHsCode.substring(0, 4))) {
 
             return 12;
 
         }
 
-
         // 앞 2자리 일치 : 8점
+
         if (cHsCode.length() >= 2 &&
-            lHsCode.length() >= 2 &&
-            cHsCode.substring(0, 2).equals(lHsCode.substring(0, 2))) {
+
+                lHsCode.length() >= 2 &&
+
+                cHsCode.substring(0, 2).equals(lHsCode.substring(0, 2))) {
 
             return 8;
 
         }
 
-
         // 일치하지 않음
+
         return 0;
 
     }
 
     // 4. 일정 적합도 점수 계산 : 15점
-    private Integer scheduleScore(
-        Cscore2Entity cscore2Entity , 
-        Lscore2Entity lscore2Entity) {
 
-        // 날짜 일(day) 로 변환 
-        // toEpochDay() : LocalDate 객체의 날짜를 경과한 날짜 수(long 타입)로 변환
+    private Integer scheduleScore(
+
+            Cscore2Entity cscore2Entity,
+
+            Lscore2Entity lscore2Entity) {
+
+        // 날짜 일(day)로 변환
+
         Long desiredDate = cscore2Entity.getDesiredDate().toEpochDay();
 
         Long availableDate = lscore2Entity.getAvailableDate().toEpochDay();
 
         Long dateDifference;
 
-        // 희망 날짜가 더 크면 : 희망 날짜 - 가능 날짜
+        // 희망 날짜가 더 크면
+
         if (desiredDate > availableDate) {
 
             dateDifference = desiredDate - availableDate;
-            
+
         } else {
 
-            // 가능 날짜가 더 크거나 같으면 :  같은 날짜 - 희망 날짜
             dateDifference = availableDate - desiredDate;
 
         }
 
         // 날짜가 같으면 : 15점
+
         if (dateDifference == 0) {
 
             return 15;
-            
+
         }
 
         // 날짜 차이가 3일 이내 : 13점
+
         if (dateDifference <= 3) {
-            
+
             return 13;
 
         }
 
         // 날짜 차이가 7일 이내 : 10점
+
         if (dateDifference <= 7) {
-            
+
             return 10;
 
         }
 
         // 날짜 차이가 14일 이내 : 7점
+
         if (dateDifference <= 14) {
-            
+
             return 7;
 
         }
 
         // 14일 초과지만 같은 연도 및 월 : 5점
+
         if (cscore2Entity.getDesiredDate().getYear() == lscore2Entity.getAvailableDate().getYear()
-        && cscore2Entity.getDesiredDate().getMonth() == lscore2Entity.getAvailableDate().getMonth()) {
+
+                && cscore2Entity.getDesiredDate().getMonth() == lscore2Entity.getAvailableDate().getMonth()) {
 
             return 5;
-            
+
         }
 
         // 그 외 : 0점
+
         return 0;
 
     }
 
     // 5. 운송 경험에 따른 점수 계산 : 10점
+
     private Integer experienceScore(Lscore1Entity lscore1Entity) {
 
         // 물류업체의 운송 경험 횟수
+
         Integer experienceCount = lscore1Entity.getExperienceCount();
 
         // 800회 이상 : 10점
-        if(experienceCount >= 800) {
-            
+
+        if (experienceCount >= 800) {
+
             return 10;
 
         }
 
         // 600 ~ 799회 : 8점
+
         if (experienceCount >= 600) {
-            
+
             return 8;
 
         }
 
         // 400 ~ 599회 : 6점
+
         if (experienceCount >= 400) {
-            
+
             return 6;
 
         }
 
         // 200 ~ 399회 : 4점
+
         if (experienceCount >= 200) {
-            
+
             return 4;
 
         }
 
-        // 1 ~ 199회
+        // 1 ~ 199회 : 2점
+
         if (experienceCount >= 1) {
 
             return 2;
-            
+
         }
 
-    return 0;
+        return 0;
 
     }
 
-    // [4] 최종 매칭 실행
-    @Transactional 
+    // [4] 최종 자동 매칭 실행
+
+    @Transactional
+
     public boolean matchingWrite(Integer cscore1Id) {
 
-        // 1. 수출입기업(화주) 기본 조건 조회
-        Cscore1Entity cscore1Entity = cscore1Repository.findById(cscore1Id).orElse(null);
+        // [수정] 1. 화주 기본 조건 조회 및 잠금
 
-        // 해당 화주 조건이 존재하지 않으면 매칭 실패
+        Cscore1Entity cscore1Entity = cscore1Repository.findForUpdate(cscore1Id).orElse(null);
+
         if (cscore1Entity == null) {
-            
+
             return false;
 
         }
 
-        // 2. Cscore1에 연결된 수출입기업(화주) 물량/일정 조회
+        // [추가] 비활성 화주 회원의 자동 매칭 실행 방지
+        if (cscore1Entity.getMemberEntity().getStatus() == null
+                || cscore1Entity.getMemberEntity().getStatus() == false) {
+            return false;
+        }
+
+        // 2. 화주 매칭 동의 여부 확인
+
+        if (cscore1Entity.getMatchingAgree() == null || cscore1Entity.getMatchingAgree() == false) {
+
+            return false;
+
+        }
+
+        // 3. 화주 물량/일정 조건 조회
+
         Cscore2Entity cscore2Entity = cscore2Repository.findByCscore1Entity(cscore1Entity).orElse(null);
 
-        // 3. Cscore1에 연결된수출입기업(화주) 특수화물 조건 조회
+        // 4. 화주 특수화물 조건 조회
+
         Cscore3Entity cscore3Entity = cscore3Repository.findByCscore1Entity(cscore1Entity).orElse(null);
 
-        // Cscore2 또는 Cscore3 없으면 매칭에 필요한 정보가 부족하므로 실패
         if (cscore2Entity == null || cscore3Entity == null) {
-            
+
             return false;
 
         }
 
-        // 4. 이미 매칭된 수출입기업(화주) 조건인지 확인
-        List<MatchingEntity> matchingEntities = matchingRepository.findAll();
+        // 5. 점수 계산에 필요한 데이터 확인
 
-        // 기존 매칭 데이터를 하나씩 확인
-        for(MatchingEntity matchingEntity : matchingEntities) {
+        if (cscore1Entity.getHsCode() == null
 
-            // 같은 cscore1Id가 이미 Matching에 존재하면 중복 매칭을 하지 않고 false 반환
-            if (matchingEntity.getCscore1Entity().getCscore1Id().equals(cscore1Id)) {
+                || cscore2Entity.getDesiredDate() == null
 
-                return false;
-                
-            }
+                || cscore2Entity.getRequestWeight() == null
+
+                || !Double.isFinite(cscore2Entity.getRequestWeight())
+
+                || cscore2Entity.getRequestWeight() <= 0) {
+
+            return false;
+
         }
 
-        // 5. 하나씩 비교하기 위해 등록된 모든 물류업체 조건 전체 조회
-        List<Lscore1Entity> lscore1Entities = lscore1Repository.findAll();
+        // [수정] 6. 매칭에 동의한 물류업체 조건만 조회
 
-        // 6. 최고점 업체와 점수를 저장할 변수, 업체 선택 안 한 상태 = null
-        Lscore1Entity topLscore1Entity = null;
+        List<Lscore1Entity> lscore1Entities = lscore1Repository.findByMatchingAgreeTrue();
 
-        // 최고점 업체의 각 점수를 저장할 변수
-        Integer topRouteScore = 0;
+        // 조건을 통과한 업체가 있는지 확인할 변수
 
-        Integer topCapacityScore = 0;
+        boolean matchingResult = false;
 
-        Integer topItemScore = 0;
+        // [수정] 7. 등록된 물류기업을 하나씩 반복 비교
 
-        Integer topScheduleScore = 0;
+        for (Lscore1Entity lscore1Entity : lscore1Entities) {
 
-        Integer topExperienceScore = 0;
+            // [추가] 비활성 물류기업은 추천 후보에서 제외
+            if (lscore1Entity.getMemberEntity().getStatus() == null
+                    || lscore1Entity.getMemberEntity().getStatus() == false) {
+                continue;
+            }
 
-        // 현재까지 가장 높은 총점, 처음에는 어떤 업체도 계산하지 않았으므로 -1로 시작
-        Integer topTotalScore = -1;
+            // 현재 물류업체 가용 물량 및 가능 날짜 조회
 
-        // 7. 등록된 물류기업을 하나씩 반복 비교
-        for(Lscore1Entity lscore1Entity : lscore1Entities) {
-
-            // 현재 물류업체 가용 물량 및 가능 날짜 등 조건 조회
             Lscore2Entity lscore2Entity = lscore2Repository.findByLscore1Entity(lscore1Entity).orElse(null);
 
-            // 현재 물류업체 냉장, 위험물, 중량물 등 조건 조회
+            // 현재 물류업체 특수화물 조건 조회
+
             Lscore3Entity lscore3Entity = lscore3Repository.findByLscore1Entity(lscore1Entity).orElse(null);
 
-            // Lscore2 또는 Lscore3 없으면 비교 불가, 다음 물류기업으로 이동
+            // 비교할 조건이 없으면 다음 물류기업으로 이동
+
             if (lscore2Entity == null || lscore3Entity == null) {
-                
+
                 continue;
 
             }
 
-            // 8. 화주 조건과 현재 물류업체 조건을 조건을 1차 필터로 검사
-            boolean filterResult = firstFilter(cscore1Entity, cscore2Entity, cscore3Entity, lscore1Entity, lscore2Entity, lscore3Entity);
+            // 점수 계산에 필요한 데이터 확인
 
-            // 1차 필수조건에서 탈락한 업체 -> 점수 계산하지 않고 다음 업체
+            if (lscore1Entity.getHsCode() == null
+
+                    || lscore2Entity.getAvailableDate() == null
+
+                    || lscore2Entity.getAvailableCapacity() == null
+
+                    || !Double.isFinite(lscore2Entity.getAvailableCapacity())
+
+                    || lscore2Entity.getAvailableCapacity() <= 0) {
+
+                continue;
+
+            }
+
+            // 8. 화주와 물류업체의 필수조건 검사
+
+            boolean filterResult = firstFilter(
+
+                    cscore1Entity, cscore2Entity, cscore3Entity,
+
+                    lscore1Entity, lscore2Entity, lscore3Entity);
+
+            // 1차 필터 탈락 시 다음 물류기업 검사
+
             if (filterResult == false) {
-                
+
                 continue;
 
             }
 
-            // 9. 1차 필터를 통과한 업체의 2차 점수 계산
+            // 조건을 통과한 업체가 존재
 
-            // 노선 점수 계산
+            matchingResult = true;
+
+            // [추가] 9. 동일한 화주-물류기업 조건의 중복 매칭 확인
+
+            boolean exists = matchingRepository.existsByCscore1EntityCscore1IdAndLscore1EntityLscore1Id(cscore1Id, lscore1Entity.getLscore1Id());
+
+            // 이미 추천된 업체는 중복 저장하지 않음
+
+            if (exists) {
+
+                continue;
+
+            }
+
+            // 10. 1차 필터 통과 업체의 2차 점수 계산
+
+            // 노선 점수
+
             Integer routeScore = routeScore(lscore1Entity);
 
-            // 가용 물량 점수 계산
+            // 가용 물량 점수
+
             Integer capacityScore = capacityScore(cscore2Entity, lscore2Entity);
 
-            // 품목 적합도 점수 계산
+            // 품목 적합도 점수
+
             Integer itemScore = itemScore(cscore1Entity, lscore1Entity);
 
-            // 일정 적합도 점수 계산
+            // 일정 적합도 점수
+
             Integer scheduleScore = scheduleScore(cscore2Entity, lscore2Entity);
 
-            // 운송 경험 점수 계산
+            // 운송 경험 점수
+
             Integer experienceScore = experienceScore(lscore1Entity);
 
-            // 10. 계산한 5개 점수 합한 총점 계산
-            Integer totalscore = routeScore + capacityScore + itemScore + scheduleScore + experienceScore;
+            // 11. 5개 점수 합산
 
-            // 11. 현재 업체의 총점이 기존 최고점보다 높은지 확인
-            if (totalscore > topTotalScore) {
+            Integer totalScore =
 
-                // 최고점 물류업체를 현재 업체로 변경
-                topLscore1Entity = lscore1Entity;
+                    routeScore
 
-                // 현재 업체의 각 점수도 최고점 정보로 저장
-                topRouteScore = routeScore;
+                    + capacityScore
 
-                topCapacityScore = capacityScore;
+                    + itemScore
 
-                topItemScore = itemScore;
+                    + scheduleScore
 
-                topScheduleScore = scheduleScore;
+                    + experienceScore;
 
-                topExperienceScore = experienceScore;
+            // [수정] 12. 현재 물류기업의 매칭 결과 Entity 생성
 
-                // 현재 업체의 총점을 새로운 최고점으로 저장
-                topTotalScore = totalscore;
-                
+            MatchingEntity matchingEntity = MatchingEntity.builder()
+
+                    .cscore1Entity(cscore1Entity)
+
+                    .lscore1Entity(lscore1Entity)
+
+                    .routeScore(routeScore)
+
+                    .capacityScore(capacityScore)
+
+                    .itemScore(itemScore)
+
+                    .scheduleScore(scheduleScore)
+
+                    .experienceScore(experienceScore)
+
+                    .totalScore(totalScore)
+
+                    .build();
+
+            // 13. 현재 물류기업의 추천 결과 저장
+
+            MatchingEntity savedMatchingEntity = matchingRepository.save(matchingEntity);
+
+            if (savedMatchingEntity.getMatchingId() == null) {
+
+                return false;
+
             }
 
-        }
-
-        // 12. 모든 물류업체 확인 후 1차 필터 통과가 존재하지 않으면 매칭 실패
-        if (topLscore1Entity == null) {
-            
-            return false;
+            // 다음 물류기업도 계속 검사
 
         }
 
-        // 13. 최종 매칭된 수출입기업과 물류업체 정보를 MatchingEntity로 생성
-        MatchingEntity matchingEntity = MatchingEntity.builder()
-                                        .cscore1Entity(cscore1Entity)
-                                        .lscore1Entity(topLscore1Entity)
-                                        .routeScore(topRouteScore)
-                                        .capacityScore(topCapacityScore)
-                                        .itemScore(topItemScore)
-                                        .scheduleScore(topScheduleScore)
-                                        .experienceScore(topExperienceScore)
-                                        .totalScore(topTotalScore)
-                                        .build();
+        // 한 곳 이상 조건을 통과했다면 true
 
-        // 14. 매칭 결과를 테이블에 저장
-        MatchingEntity savedMatchingEntity = matchingRepository.save(matchingEntity);
-
-        // 15. 저장 후 matchingId가 생성되면 정상 저장
-        if (savedMatchingEntity.getMatchingId() != null) {
-            
-
-            return true;
-
-        }
-
-        return false;
+        return matchingResult;
 
     }
 
-    // [5] 매칭 결과 전체 조회
+    // [5] 매칭 결과 전체 조회 (관리자)
+
     public List<MatchingDto> matchingRead() {
 
-        // 1. matching 테이블 전체 조회
-        List<MatchingEntity> matchingEntities =
-                matchingRepository.findAll();
+        // [수정] 전체 매칭 결과 최신순 조회
 
-        // 2. 반환할 DTO 리스트 생성
+        List<MatchingEntity> matchingEntities = matchingRepository.findAllByOrderByCreatedAtDescMatchingIdDesc();
+
         List<MatchingDto> matchingDtos = new ArrayList<>();
 
-        // 3. 조회한 Entity를 하나씩 DTO로 변환
+        // 조회한 Entity를 DTO로 변환
+
         for (MatchingEntity matchingEntity : matchingEntities) {
 
-            MatchingDto matchingDto = MatchingDto.builder()
+            MatchingDto matchingDto = matchingDtoFrom(matchingEntity);
+
+            matchingDtos.add(matchingDto);
+
+        }
+
+        return matchingDtos;
+
+    }
+
+    // [6] 회원별 매칭 조회
+
+    public List<MatchingDto> matchingMemberRead(String memberId) {
+
+        // [수정] 관리자 승인 여부와 관계없이 회원별 매칭 조회
+
+        List<MatchingEntity> matchingEntities = matchingRepository.findVisibleToMember(memberId);
+
+        List<MatchingDto> matchingDtos = new ArrayList<>();
+
+        for (MatchingEntity matchingEntity : matchingEntities) {
+
+            // [추가] 진행 중인 매칭은 양쪽 회원이 모두 활성인 경우에만 표시
+            // 완료/실패 기록은 이전 이력이므로 그대로 표시
+            if ("PENDING".equals(matchingEntity.getFinalStatus())) {
+
+                if (matchingEntity.getCscore1Entity().getMemberEntity().getStatus() == null
+                        || matchingEntity.getCscore1Entity().getMemberEntity().getStatus() == false) {
+                    continue;
+                }
+
+                if (matchingEntity.getLscore1Entity().getMemberEntity().getStatus() == null
+                        || matchingEntity.getLscore1Entity().getMemberEntity().getStatus() == false) {
+                    continue;
+                }
+            }
+
+            MatchingDto matchingDto = matchingDtoFrom(matchingEntity);
+
+            matchingDtos.add(matchingDto);
+
+        }
+
+        return matchingDtos;
+
+    }
+
+    // [7] 수출입기업(화주) 매칭 수락
+
+    // A방식에서는 추천된 물류기업에 매칭을 요청하는 기능
+
+    public boolean shipperAccept(Integer matchingId, String memberId) {
+
+        // 1. 매칭 조회 및 잠금
+
+        MatchingEntity matchingEntity = matchingFindForChange(matchingId);
+
+        if (matchingEntity == null) {
+
+            return false;
+
+        }
+
+        // [추가] 화주와 물류기업 모두 활성 상태여야 요청/수락 가능
+        if (matchingEntity.getCscore1Entity().getMemberEntity().getStatus() == null
+                || matchingEntity.getCscore1Entity().getMemberEntity().getStatus() == false) {
+            return false;
+        }
+
+        if (matchingEntity.getLscore1Entity().getMemberEntity().getStatus() == null
+                || matchingEntity.getLscore1Entity().getMemberEntity().getStatus() == false) {
+            return false;
+        }
+
+        // 2. 실제 화주 회원번호 확인
+
+        String shipperMemberId = matchingEntity
+
+                .getCscore1Entity()
+
+                .getMemberEntity()
+
+                .getMemberId();
+
+        // 로그인 회원이 매칭 당사자가 아니면 처리 불가
+
+        if (!shipperMemberId.equals(memberId)) {
+
+            return false;
+
+        }
+
+        // 3. 이미 종료된 매칭이면 처리 불가
+
+        if (!"PENDING".equals(matchingEntity.getFinalStatus())) {
+
+            return false;
+
+        }
+
+        // 4. 화주가 아직 응답하지 않은 추천인지 확인
+
+        if (!"WAITING".equals(matchingEntity.getShipperStatus())) {
+
+            return false;
+
+        }
+
+        // 5. 물류기업도 아직 응답하지 않은 상태여야 함
+
+        if (!"WAITING".equals(matchingEntity.getLogisticsStatus())) {
+
+            return false;
+
+        }
+
+        // [추가] 6. 같은 화주 조건으로 이미 요청 또는 완료된 매칭 확인
+
+        Integer cscore1Id = matchingEntity.getCscore1Entity().getCscore1Id();
+
+        List<MatchingEntity> matchingEntities = matchingRepository.findBlockingRequests(cscore1Id);
+
+        for (MatchingEntity existingMatchingEntity : matchingEntities) {
+
+            if (!existingMatchingEntity.getMatchingId().equals(matchingId)) {
+
+                // 이미 다른 물류기업과 진행 중이거나 완료
+
+                return false;
+
+            }
+
+        }
+
+        // [수정] 7. 화주가 물류기업에 매칭 요청
+
+        matchingEntity.setShipperStatus("ACCEPTED");
+
+        // 물류기업이 아직 수락하지 않았으므로 PENDING 유지
+
+        matchingRepository.save(matchingEntity);
+
+        return true;
+
+    }
+
+    // [8] 수출입기업(화주) 매칭 거절
+
+    public boolean shipperReject(Integer matchingId, String memberId) {
+
+        MatchingEntity matchingEntity = matchingFindForChange(matchingId);
+
+        if (matchingEntity == null) {
+
+            return false;
+
+        }
+
+        // [추가] 요청한 회원 본인이 비활성이라면 거절 처리 불가
+        // 상대방 비활성 상태는 기존 요청 정리를 위해 허용
+        if (matchingEntity.getCscore1Entity().getMemberEntity().getStatus() == null
+                || matchingEntity.getCscore1Entity().getMemberEntity().getStatus() == false) {
+            return false;
+        }
+
+        // 실제 수출입기업 회원인지 확인
+
+        String shipperMemberId = matchingEntity
+
+                .getCscore1Entity()
+
+                .getMemberEntity()
+
+                .getMemberId();
+
+        if (!shipperMemberId.equals(memberId)) {
+
+            return false;
+
+        }
+
+        // 이미 종료된 매칭은 거절 불가
+
+        if (!"PENDING".equals(matchingEntity.getFinalStatus())) {
+
+            return false;
+
+        }
+
+        // 아직 요청하지 않은 추천만 거절 가능
+
+        if (!"WAITING".equals(matchingEntity.getShipperStatus())) {
+
+            return false;
+
+        }
+
+        if (!"WAITING".equals(matchingEntity.getLogisticsStatus())) {
+
+            return false;
+
+        }
+
+        // 화주 거절 처리
+
+        matchingEntity.setShipperStatus("REJECTED");
+
+        // 매칭 실패 처리
+
+        matchingEntity.setFinalStatus("FAILED");
+
+        matchingRepository.save(matchingEntity);
+
+        return true;
+
+    }
+
+    // [9] 물류기업 매칭 수락
+
+    // [수정] 관리자 승인 없이 즉시 매칭 완료
+
+    public boolean logisticsAccept(Integer matchingId, String memberId) {
+
+        MatchingEntity matchingEntity = matchingFindForChange(matchingId);
+
+        if (matchingEntity == null) {
+
+            return false;
+
+        }
+
+        // [추가] 화주와 물류기업 모두 활성 상태여야 요청/수락 가능
+        if (matchingEntity.getCscore1Entity().getMemberEntity().getStatus() == null
+                || matchingEntity.getCscore1Entity().getMemberEntity().getStatus() == false) {
+            return false;
+        }
+
+        if (matchingEntity.getLscore1Entity().getMemberEntity().getStatus() == null
+                || matchingEntity.getLscore1Entity().getMemberEntity().getStatus() == false) {
+            return false;
+        }
+
+        // 실제 물류기업 회원번호 확인
+
+        String logisticsMemberId = matchingEntity
+
+                .getLscore1Entity()
+
+                .getMemberEntity()
+
+                .getMemberId();
+
+        if (!logisticsMemberId.equals(memberId)) {
+
+            return false;
+
+        }
+
+        // 매칭이 진행 중인지 확인
+
+        if (!"PENDING".equals(matchingEntity.getFinalStatus())) {
+
+            return false;
+
+        }
+
+        // 화주가 먼저 매칭 요청했는지 확인
+
+        if (!"ACCEPTED".equals(matchingEntity.getShipperStatus())) {
+
+            return false;
+
+        }
+
+        // 물류기업이 아직 응답하지 않은 상태인지 확인
+
+        if (!"WAITING".equals(matchingEntity.getLogisticsStatus())) {
+
+            return false;
+
+        }
+
+        // 물류기업 수락
+
+        matchingEntity.setLogisticsStatus("ACCEPTED");
+
+        // [수정] 관리자 승인 없이 자동 매칭 완료
+
+        matchingEntity.setFinalStatus("COMPLETED");
+
+        matchingRepository.save(matchingEntity);
+
+        return true;
+
+    }
+
+    // [10] 물류기업 매칭 거절
+
+    public boolean logisticsReject(Integer matchingId, String memberId) {
+
+        MatchingEntity matchingEntity = matchingFindForChange(matchingId);
+
+        if (matchingEntity == null) {
+
+            return false;
+
+        }
+
+        // [추가] 요청한 회원 본인이 비활성이라면 거절 처리 불가
+        // 상대방 비활성 상태는 기존 요청 정리를 위해 허용
+        if (matchingEntity.getLscore1Entity().getMemberEntity().getStatus() == null
+                || matchingEntity.getLscore1Entity().getMemberEntity().getStatus() == false) {
+            return false;
+        }
+
+        // 실제 물류기업 회원번호 확인
+
+        String logisticsMemberId = matchingEntity
+
+                .getLscore1Entity()
+
+                .getMemberEntity()
+
+                .getMemberId();
+
+        if (!logisticsMemberId.equals(memberId)) {
+
+            return false;
+
+        }
+
+        // 매칭 진행 중인지 확인
+
+        if (!"PENDING".equals(matchingEntity.getFinalStatus())) {
+
+            return false;
+
+        }
+
+        // 화주가 먼저 요청한 매칭이어야 함
+
+        if (!"ACCEPTED".equals(matchingEntity.getShipperStatus())) {
+
+            return false;
+
+        }
+
+        // 아직 물류기업이 응답하지 않은 상태인지 확인
+
+        if (!"WAITING".equals(matchingEntity.getLogisticsStatus())) {
+
+            return false;
+
+        }
+
+        // 물류기업 거절 처리
+
+        matchingEntity.setLogisticsStatus("REJECTED");
+
+        matchingEntity.setFinalStatus("FAILED");
+
+        matchingRepository.save(matchingEntity);
+
+        return true;
+
+    }
+
+    // [11] 매칭 상태 변경 전 조회 및 잠금
+
+    // [추가] 동일 화주가 여러 물류기업에 동시에 요청하는 상황 방지
+
+    private MatchingEntity matchingFindForChange(Integer matchingId) {
+
+        if (matchingId == null) {
+
+            return null;
+
+        }
+
+        // 1. 변경하려는 매칭 조회
+
+        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
+
+        if (matchingEntity == null) {
+
+            return null;
+
+        }
+
+        // 2. 매칭에 연결된 화주 조건 번호 확인
+
+        Integer cscore1Id =
+
+                matchingEntity.getCscore1Entity().getCscore1Id();
+
+        // 3. 화주 조건 조회 및 DB 잠금
+
+        Cscore1Entity cscore1Entity = cscore1Repository.findForUpdate(cscore1Id).orElse(null);
+
+        if (cscore1Entity == null) {
+
+            return null;
+
+        }
+
+        // 4. 매칭 결과 다시 조회 및 DB 잠금
+
+        matchingEntity = matchingRepository.findByMatchingId(matchingId).orElse(null);
+
+        return matchingEntity;
+
+    }
+
+    // [12] MatchingEntity -> MatchingDto 변환
+
+    // 기존 matchingRead(), matchingMemberRead()에서
+
+    // 중복 작성했던 DTO 변환 코드를 하나로 정리
+
+    private MatchingDto matchingDtoFrom(MatchingEntity matchingEntity) {
+
+        MatchingDto matchingDto = MatchingDto.builder()
 
                 // 매칭 PK
+
                 .matchingId(matchingEntity.getMatchingId())
 
-                // 수출입기업 조건 PK
+                // 화주 매칭 조건 PK
+
                 .cscore1Id(matchingEntity.getCscore1Entity().getCscore1Id())
 
-                // 물류기업 조건 PK
+                // 물류기업 매칭 조건 PK
+
                 .lscore1Id(matchingEntity.getLscore1Entity().getLscore1Id())
 
                 // 수출입기업 정보
+
                 .shipperCompanyName(
-                    matchingEntity
-                        .getCscore1Entity()
-                        .getMemberEntity()
-                        .getCompanyName()
+
+                        matchingEntity
+
+                                .getCscore1Entity()
+
+                                .getMemberEntity()
+
+                                .getCompanyName()
+
                 )
 
                 .shipperContactName(
-                    matchingEntity
-                        .getCscore1Entity()
-                        .getMemberEntity()
-                        .getManagerName()
+
+                        matchingEntity
+
+                                .getCscore1Entity()
+
+                                .getMemberEntity()
+
+                                .getManagerName()
+
                 )
 
                 .shipperBizNumber(
-                    matchingEntity
-                        .getCscore1Entity()
-                        .getMemberEntity()
-                        .getBusinessRegNo()
+
+                        matchingEntity
+
+                                .getCscore1Entity()
+
+                                .getMemberEntity()
+
+                                .getBusinessRegNo()
+
                 )
 
                 .shipperPhone(
-                    matchingEntity
-                        .getCscore1Entity()
-                        .getMemberEntity()
-                        .getUserPhone()
+
+                        matchingEntity
+
+                                .getCscore1Entity()
+
+                                .getMemberEntity()
+
+                                .getUserPhone()
+
                 )
 
                 .shipperAddress(
-                    matchingEntity
-                        .getCscore1Entity()
-                        .getMemberEntity()
-                        .getCompanyAddress()
+
+                        matchingEntity
+
+                                .getCscore1Entity()
+
+                                .getMemberEntity()
+
+                                .getCompanyAddress()
+
                 )
 
-
                 // 물류기업 정보
+
                 .logisticsCompanyName(
-                    matchingEntity
-                        .getLscore1Entity()
-                        .getMemberEntity()
-                        .getCompanyName()
+
+                        matchingEntity
+
+                                .getLscore1Entity()
+
+                                .getMemberEntity()
+
+                                .getCompanyName()
+
                 )
 
                 .logisticsContactName(
-                    matchingEntity
-                        .getLscore1Entity()
-                        .getMemberEntity()
-                        .getManagerName()
+
+                        matchingEntity
+
+                                .getLscore1Entity()
+
+                                .getMemberEntity()
+
+                                .getManagerName()
+
                 )
 
                 .logisticsBizNumber(
-                    matchingEntity
-                        .getLscore1Entity()
-                        .getMemberEntity()
-                        .getBusinessRegNo()
+
+                        matchingEntity
+
+                                .getLscore1Entity()
+
+                                .getMemberEntity()
+
+                                .getBusinessRegNo()
+
                 )
 
                 .logisticsPhone(
-                    matchingEntity
-                        .getLscore1Entity()
-                        .getMemberEntity()
-                        .getUserPhone()
+
+                        matchingEntity
+
+                                .getLscore1Entity()
+
+                                .getMemberEntity()
+
+                                .getUserPhone()
+
                 )
 
                 .logisticsAddress(
-                    matchingEntity
-                        .getLscore1Entity()
-                        .getMemberEntity()
-                        .getCompanyAddress()
+
+                        matchingEntity
+
+                                .getLscore1Entity()
+
+                                .getMemberEntity()
+
+                                .getCompanyAddress()
+
                 )
 
                 // 점수
+
                 .routeScore(matchingEntity.getRouteScore())
 
                 .capacityScore(matchingEntity.getCapacityScore())
@@ -695,6 +1406,7 @@ public class MatchingService {
                 .totalScore(matchingEntity.getTotalScore())
 
                 // 상태
+
                 .adminStatus(matchingEntity.getAdminStatus())
 
                 .shipperStatus(matchingEntity.getShipperStatus())
@@ -704,413 +1416,43 @@ public class MatchingService {
                 .finalStatus(matchingEntity.getFinalStatus())
 
                 // 추천 이유 / 경고 메시지
+
                 .recommendReason(matchingEntity.getRecommendReason())
 
                 .warningMessage(matchingEntity.getWarningMessage())
 
+                // 매칭 생성일
+
                 .createdAt(matchingEntity.getCreatedAt())
-                
+
                 .build();
 
-                // 4. 리스트에 DTO 추가
-                matchingDtos.add(matchingDto);
-
-            }
-
-            // 5. 매칭 결과 반환
-            return matchingDtos;
-            
-        }
-
-    // [6] 관리자 매칭 승인
-    public boolean matchingApprove( Integer matchingId ) {
-
-        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
-
-        if (matchingEntity == null) {
-                
-            return false;
-
-        }
-
-        matchingEntity.setAdminStatus("APPROVED");
-
-        matchingRepository.save(matchingEntity);
-
-        return true;
+        return matchingDto;
 
     }
 
-    // [7] 관리자 매칭 반려
-    public boolean matchingReject( Integer matchingId ) {
+    // [13] 기존 Controller 임시 호환용
 
-        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
+    // A방식에서는 관리자 승인을 사용하지 않음
 
-        if (matchingEntity == null) {
-                
-            return false;
+    // MatchingController 수정 시 이 메서드는 삭제 가능
 
-        }
+    public boolean matchingApprove(Integer matchingId) {
 
-        // 관리자 단계에서 반려되면 매칭 종료
-        matchingEntity.setAdminStatus("REJECTED");
-
-        matchingEntity.setFinalStatus("FAILED");
-        
-        matchingRepository.save(matchingEntity);
-
-        return true;
+        return false;
 
     }
 
-    // [8] 회원별 승인된 매칭 조회
-    public List<MatchingDto> matchingMemberRead(String memberId) {
+    // [14] 기존 Controller 임시 호환용
 
-        // 1. matching 테이블 전체 조회
-        List<MatchingEntity> matchingEntities = matchingRepository.findAll();
+    // A방식에서는 관리자 반려를 사용하지 않음
 
-        // 2. DTO 리스트 반환
-        List<MatchingDto> matchingDtos = new ArrayList<>();
+    // MatchingController 수정 시 이 메서드는 삭제 가능
 
-        // 3. 매칭 결과 하나씩 확인
-        for (MatchingEntity matchingEntity : matchingEntities) {
+    public boolean matchingReject(Integer matchingId) {
 
-            // 관리자가 승인한 매칭만 회원에게 보여줌
-            if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
-                
-                continue;
+        return false;
 
-            }
-
-            // 4. 매칭된 수출입기업 member_id
-            String shipperMemberId = matchingEntity
-                                    .getCscore1Entity()
-                                    .getMemberEntity()
-                                    .getMemberId();
-            
-            // 5. 매칭된 물류기업 member_id
-            String logisticMemberId = matchingEntity
-                                    .getLscore1Entity()
-                                    .getMemberEntity()
-                                    .getMemberId();
-
-            // 6. 로그인한 회원이 매칭 당사자 아니면 다음 매칭
-            if (!shipperMemberId.equals(memberId) 
-                && !logisticMemberId.equals(memberId)) {
-
-                continue;
-                
-            }
-
-            // 7. Entity -> DTO
-            MatchingDto matchingDto = MatchingDto.builder()
-                                    .matchingId(matchingEntity.getMatchingId())
-                                    .cscore1Id(
-                                    matchingEntity
-                                        .getCscore1Entity()
-                                        .getCscore1Id()
-                                    )
-
-                                    .lscore1Id(
-                                    matchingEntity
-                                        .getLscore1Entity()
-                                        .getLscore1Id()
-                                    )
-
-
-                                    // 수출입기업 정보
-                                    .shipperCompanyName(
-                                        matchingEntity
-                                            .getCscore1Entity()
-                                            .getMemberEntity()
-                                            .getCompanyName()
-                                    )
-
-                                    .shipperContactName(
-                                        matchingEntity
-                                            .getCscore1Entity()
-                                            .getMemberEntity()
-                                            .getManagerName()
-                                    )
-
-                                    .shipperBizNumber(
-                                        matchingEntity
-                                            .getCscore1Entity()
-                                            .getMemberEntity()
-                                            .getBusinessRegNo()
-                                    )
-
-                                    .shipperPhone(
-                                        matchingEntity
-                                            .getCscore1Entity()
-                                            .getMemberEntity()
-                                            .getUserPhone()
-                                    )
-
-                                    .shipperAddress(
-                                        matchingEntity
-                                            .getCscore1Entity()
-                                            .getMemberEntity()
-                                            .getCompanyAddress()
-                                    )
-
-
-                                    // 물류기업 정보
-                                    .logisticsCompanyName(
-                                        matchingEntity
-                                            .getLscore1Entity()
-                                            .getMemberEntity()
-                                            .getCompanyName()
-                                    )
-
-                                    .logisticsContactName(
-                                        matchingEntity
-                                            .getLscore1Entity()
-                                            .getMemberEntity()
-                                            .getManagerName()
-                                    )
-
-                                    .logisticsBizNumber(
-                                        matchingEntity
-                                            .getLscore1Entity()
-                                            .getMemberEntity()
-                                            .getBusinessRegNo()
-                                    )
-
-                                    .logisticsPhone(
-                                        matchingEntity
-                                            .getLscore1Entity()
-                                            .getMemberEntity()
-                                            .getUserPhone()
-                                    )
-
-                                    .logisticsAddress(
-                                        matchingEntity
-                                            .getLscore1Entity()
-                                            .getMemberEntity()
-                                            .getCompanyAddress()
-                                    )
-
-
-                                    // 점수
-                                    .routeScore(matchingEntity.getRouteScore())
-                                    .capacityScore(matchingEntity.getCapacityScore())
-                                    .itemScore(matchingEntity.getItemScore())
-                                    .scheduleScore(matchingEntity.getScheduleScore())
-                                    .experienceScore(matchingEntity.getExperienceScore())
-                                    .totalScore(matchingEntity.getTotalScore())
-
-
-                                    // 상태
-                                    .adminStatus(matchingEntity.getAdminStatus())
-                                    .shipperStatus(matchingEntity.getShipperStatus())
-                                    .logisticsStatus(matchingEntity.getLogisticsStatus())
-                                    .finalStatus(matchingEntity.getFinalStatus())
-
-
-                                    .recommendReason(matchingEntity.getRecommendReason())
-                                    .warningMessage(matchingEntity.getWarningMessage())
-
-                                    .createdAt(matchingEntity.getCreatedAt())
-
-                                    .build();
-
-            matchingDtos.add(matchingDto);
-
-        }
-
-        return matchingDtos;
-
-    }
-
-    // [9] 수출입기업 매칭 수락
-    public boolean shipperAccept(Integer matchingId, String memberId) {
-
-        // 1. 매칭 조회
-        MatchingEntity matchingEntity =
-                matchingRepository.findById(matchingId).orElse(null);
-
-        if (matchingEntity == null) {
-            return false;
-        }
-
-        // 2. 이 매칭의 실제 수출입기업 회원번호
-        String shipperMemberId =
-                matchingEntity
-                        .getCscore1Entity()
-                        .getMemberEntity()
-                        .getMemberId();
-
-        // 3. 로그인 회원이 실제 수출입기업 당사자인지 확인
-        if (!shipperMemberId.equals(memberId)) {
-            return false;
-        }
-
-        // 4. 관리자 승인 확인
-        if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
-            return false;
-        }
-
-        // 5. 이미 종료된 매칭이면 처리 불가
-        if (!matchingEntity.getFinalStatus().equals("PENDING")) {
-            return false;
-        }
-
-        // 6. 수출입기업 수락
-        matchingEntity.setShipperStatus("ACCEPTED");
-
-        // 7. 물류기업도 이미 수락했다면 최종 성사
-        if (matchingEntity.getLogisticsStatus().equals("ACCEPTED")) {
-            matchingEntity.setFinalStatus("COMPLETED");
-        }
-
-        matchingRepository.save(matchingEntity);
-
-        return true;
-        
-    }
-
-    // [10] 수출입기업 매칭 거절
-    public boolean shipperReject(Integer matchingId, String memberId) {
-
-        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
-
-        if (matchingEntity == null) {
-
-            return false;
-
-        }
-
-        String shipperMemberId = matchingEntity
-                                .getCscore1Entity()
-                                .getMemberEntity()
-                                .getMemberId();
-
-        // 실제 수출입기업 회원인지 확인
-        if (!shipperMemberId.equals(memberId)) {
-
-            return false;
-
-        }
-
-        if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
-
-            return false;
-
-        }
-
-        if (!matchingEntity.getFinalStatus().equals("PENDING")) {
-
-            return false;
-
-        }
-
-        matchingEntity.setShipperStatus("REJECTED");
-        
-        matchingEntity.setFinalStatus("FAILED");
-
-        matchingRepository.save(matchingEntity);
-
-        return true;
-        
-    }
-
-    // [11] 물류기업 매칭 수락
-    public boolean logisticsAccept(Integer matchingId, String memberId) {
-
-        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
-
-        if (matchingEntity == null) {
-
-            return false;
-
-        }
-
-        // 이 매칭의 실제 물류기업 회원번호
-        String logisticsMemberId = matchingEntity
-                                .getLscore1Entity()
-                                .getMemberEntity()
-                                .getMemberId();
-
-
-        // 실제 물류기업 회원인지 확인
-        if (!logisticsMemberId.equals(memberId)) {
-
-            return false;
-
-        }
-
-        if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
-
-            return false;
-
-        }
-
-        if (!matchingEntity.getFinalStatus().equals("PENDING")) {
-
-            return false;
-
-        }
-
-        matchingEntity.setLogisticsStatus("ACCEPTED");
-
-
-        if (matchingEntity.getShipperStatus().equals("ACCEPTED")) {
-
-            matchingEntity.setFinalStatus("COMPLETED");
-
-        }
-
-        matchingRepository.save(matchingEntity);
-
-        return true;
-
-    }
-
-
-    // [12] 물류기업 매칭 거절
-    public boolean logisticsReject(Integer matchingId, String memberId) {
-
-        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
-
-        if (matchingEntity == null) {
-
-            return false;
-
-        }
-
-        String logisticsMemberId = matchingEntity
-                                .getLscore1Entity()
-                                .getMemberEntity()
-                                .getMemberId();
-
-        // 실제 물류기업 회원인지 확인
-        if (!logisticsMemberId.equals(memberId)) {
-
-            return false;
-
-        }
-
-        if (!matchingEntity.getAdminStatus().equals("APPROVED")) {
-
-            return false;
-
-        }
-
-        if (!matchingEntity.getFinalStatus().equals("PENDING")) {
-
-            return false;
-
-        }
-
-        matchingEntity.setLogisticsStatus("REJECTED");
-
-        matchingEntity.setFinalStatus("FAILED");
-
-        matchingRepository.save(matchingEntity);
-
-        return true;
-        
     }
 
 }
