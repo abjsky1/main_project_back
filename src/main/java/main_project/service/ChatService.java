@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import main_project.model.dto.MessageDto;
+import main_project.model.dto.MessageSendDto;
 import main_project.model.dto.RoomDto;
 import main_project.model.entity.MemberEntity;
 import main_project.model.entity.MessageEntity;
@@ -31,7 +32,7 @@ import main_project.model.repository.RoomRepository;
 //    → 메시지를 저장하는 곳마다 "※ 6단계" 표시 : 웹소켓으로 바로 보내는 코드를 넣을 자리
 //
 //  [방 관련]     ① 내 채팅방 보기  ② 상담 시작(on)  ③ 상담 종료(off)  ④ 관리자 채팅방 목록
-//  [메시지 관련] ⑤ 메시지 목록  ⑥ 읽음 처리  메시지 보내기  탈퇴 처리   ← 다음에 추가
+//  [메시지 관련] ⑤ 메시지 목록  ⑥ 읽음 처리  ⑦ 메시지 보내기  ⑧ 탈퇴 처리
 //  =====================================================================
 @Service
 @RequiredArgsConstructor
@@ -53,6 +54,11 @@ public class ChatService {
     private static final String CLOSE_BY_ADMIN_TEXT = "고객센터에서 상담을 종료했습니다";
     private static final String CLOSE_BY_MEMBER_TEXT = "회원님이 상담을 종료했습니다";
     private static final String WELCOME_TEXT = "안녕하세요, MACROSS 고객센터입니다. 무엇을 도와드릴까요?";
+    private static final String WITHDRAW_CLOSE_TEXT = "회원 탈퇴로 상담이 종료되었습니다";   // 상담 중에 탈퇴
+    private static final String WITHDRAW_TEXT = "회원이 탈퇴했습니다";                       // 종료된 뒤에 탈퇴
+
+//  메시지 내용 최대 글자 수 (MessageEntity 의 content 칸 길이와 같게 — AuditService 의 DETAIL_MAX_LENGTH 와 같은 방식)
+    private static final int CONTENT_MAX_LENGTH = 1000;
 
     private final RoomRepository roomRepository;
     private final MessageRepository messageRepository;
@@ -309,6 +315,204 @@ public class ChatService {
 
     //  4. 정렬된 목록 반환 (stream 은 순서를 그대로 지킴 → 2번에서 정한 순서 그대로)
         return result;
+    }
+
+
+//  =====================================================================
+//  ⑤ 한 방의 메시지 목록 (그 방의 회원 또는 관리자) — GET /api/chat/rooms/{roomId}/messages
+//  - 관리자 : 지난 상담까지 전부 (증거 · 교육 자료로 볼 수 있게)
+//  - 회원   : 이번 상담(opened_at 이후)만 (다시 시작하면 새 창처럼)
+//  - 없는 방 , 남의 방이면 null
+//  =====================================================================
+    @Transactional (readOnly = true)
+    public List<MessageDto> getMessages(Integer roomId, String memberId, boolean isAdmin){
+
+    //  1. 방 찾기 (없으면 null)
+    //     SELECT * FROM room WHERE room_id = ?
+        if (roomId == null) { return null; }
+        RoomEntity roomEntity = roomRepository.findById(roomId).orElse(null);
+        if (roomEntity == null) { return null; }
+
+    //  2. 권한 확인 : 관리자는 모든 방 , 회원은 내 방만 (③ 상담 종료의 2번과 같음)
+        if (!isAdmin) {
+            MemberEntity owner = roomEntity.getMemberEntity();
+            boolean isOwner = memberId != null && owner != null && memberId.equals(owner.getMemberId());
+            if (!isOwner) { return null; }
+        }
+
+    //  3. 메시지 조회 (보는 사람에 따라 범위가 다름)
+        List<MessageEntity> messageEntities;
+        if (isAdmin) {
+        //  3-1. 관리자 : 전부
+        //       SELECT * FROM message WHERE room_id = ? ORDER BY message_id ASC
+            messageEntities = messageRepository.findByRoomEntityRoomIdOrderByMessageIdAsc(roomEntity.getRoomId());
+        } else {
+        //  3-2. 회원 : 이번 상담만 (① 내 채팅방 보기의 3번과 같음)
+        //       SELECT * FROM message WHERE room_id = ? AND created_at >= ? ORDER BY message_id ASC
+            messageEntities = messageRepository.findByRoomEntityRoomIdAndCreatedAtGreaterThanEqualOrderByMessageIdAsc(
+                roomEntity.getRoomId(), roomEntity.getOpenedAt());
+        }
+
+    //  4. 메시지 엔티티 목록 → DTO 목록
+    //     회원에게 보낼 때만 상담원(ADMIN) 이름을 "고객센터" 로 바꿈 (① 의 4번과 같음)
+        List<MessageDto> messageDtos = messageEntities.stream().map( (messageEntity) -> {
+            MessageDto messageDto = MessageDto.from(messageEntity);
+            if (!isAdmin && SENDER_ADMIN.equals(messageDto.getSenderType())) {
+                messageDto.setSenderName(CENTER_NAME);
+            }
+            return messageDto;
+        } ).toList();
+
+        return messageDtos;
+    }
+
+
+//  =====================================================================
+//  ⑥ 읽음 처리 (그 방의 회원 또는 관리자) — PUT /api/chat/rooms/{roomId}/read
+//  - "지금까지 온 메시지를 다 읽었다" 고 시각을 기록 → 이 시각 이후에 온 상대 메시지만 "안 읽음" 으로 셈
+//  - 관리자가 읽으면 admin_read_at , 회원이 읽으면 member_read_at
+//    (관리자 중 누구라도 읽으면 admin_read_at 이 바뀜 — 관리자 전체가 같은 고객센터라서)
+//  - 없는 방 , 남의 방이면 false
+//  =====================================================================
+    public boolean markRead(Integer roomId, String memberId, boolean isAdmin){
+
+    //  1. 방 찾기 (없으면 false)
+        if (roomId == null) { return false; }
+        RoomEntity roomEntity = roomRepository.findById(roomId).orElse(null);
+        if (roomEntity == null) { return false; }
+
+    //  2. 권한 확인 : 관리자는 모든 방 , 회원은 내 방만 (③ 상담 종료의 2번과 같음)
+        if (!isAdmin) {
+            MemberEntity owner = roomEntity.getMemberEntity();
+            boolean isOwner = memberId != null && owner != null && memberId.equals(owner.getMemberId());
+            if (!isOwner) { return false; }
+        }
+
+    //  3. 읽은 시각을 지금으로 — setter 로 바꾸면 메소드가 끝날 때 JPA 가 UPDATE 해 줌 (dirty checking)
+    //     UPDATE room SET admin_read_at = ? WHERE room_id = ?   (회원이면 member_read_at)
+        if (isAdmin) {
+            roomEntity.setAdminReadAt(LocalDateTime.now());
+        } else {
+            roomEntity.setMemberReadAt(LocalDateTime.now());
+        }
+
+        return true;
+    }
+
+
+//  =====================================================================
+//  ⑦ 메시지 보내기 (그 방의 회원 또는 관리자) — 웹소켓 /pub/chat/message (6단계에서 연결)
+//  - 받는 값 : 어느 방에(roomId) , 무슨 내용을(content) — MessageSendDto
+//  - 누가 보냈는지는 받지 않음 → 컨트롤러가 웹소켓 연결 때 쿠키로 확인한 memberId , isAdmin 으로 정함
+//  - 저장하지 않는 경우 (null 반환)
+//      로그인 안 함 , 내용이 비었거나 1000자 초과 , 없는 방 , 남의 방 , 종료된 방 , 비활성 회원
+//  - 돌려주는 것 : 저장된 메시지 (상담원 이름 그대로 — 관리자 기준)
+//  =====================================================================
+    public MessageDto sendMessage(MessageSendDto messageSendDto, String memberId, boolean isAdmin){
+
+    //  1. 로그인 안 했거나 , 요청 내용이 없으면 null
+        if (memberId == null) { return null; }
+        if (messageSendDto == null || messageSendDto.getRoomId() == null || messageSendDto.getContent() == null) { return null; }
+
+    //  2. 내용 검사 : 앞뒤 빈칸을 지우고 , 비었거나 1000자를 넘으면 null
+    //     trim( ) : "  안녕  " → "안녕" (앞뒤 빈칸 · 줄바꿈 제거)
+        String content = messageSendDto.getContent().trim();
+        if (content.isEmpty() || content.length() > CONTENT_MAX_LENGTH) { return null; }
+
+    //  3. 방 찾기 (없으면 null)
+    //     SELECT * FROM room WHERE room_id = ?
+        RoomEntity roomEntity = roomRepository.findById(messageSendDto.getRoomId()).orElse(null);
+        if (roomEntity == null) { return null; }
+
+    //  4. 권한 확인 : 관리자는 모든 방 , 회원은 내 방만 (③ 상담 종료의 2번과 같음)
+        if (!isAdmin) {
+            MemberEntity owner = roomEntity.getMemberEntity();
+            boolean isOwner = owner != null && memberId.equals(owner.getMemberId());
+            if (!isOwner) { return null; }
+        }
+
+    //  5. 종료된 방이면 null (상담 중일 때만 대화할 수 있음 — 회원은 [상담 시작] 으로 다시 켜야 함)
+        if (roomEntity.getStatus() == false) { return null; }
+
+    //  6. 보낸 사람 확인 (이름을 복사하려고 조회 , 없는 회원이거나 비활성 회원이면 null)
+    //     SELECT * FROM member WHERE member_id = ?
+        MemberEntity senderEntity = memberRepository.findById(memberId).orElse(null);
+        if (senderEntity == null || senderEntity.getStatus() == false) { return null; }
+
+    //  7. 메시지 저장
+    //     - 보낸 사람 종류 : 관리자면 ADMIN , 아니면 MEMBER
+    //     - 보낸 사람 이름 : 보낸 그 순간의 이름을 복사 (관리자면 상담원 이름 → 누가 답했는지 남음)
+    //     INSERT INTO message (room_id , sender_type , sender_name , content , created_at) VALUES (...)
+        String senderType = isAdmin ? SENDER_ADMIN : SENDER_MEMBER;
+        MessageEntity messageEntity = MessageEntity.builder()
+            .roomEntity(roomEntity)
+            .senderType(senderType)
+            .senderName(senderEntity.getManagerName())
+            .content(content)
+            .build();
+        messageEntity = messageRepository.save(messageEntity);
+    //  ※ 6단계 : 여기에 웹소켓으로 바로 보내기 추가
+
+    //  8. 보낸 사람은 자기 메시지까지 읽은 것으로 (내가 보낸 메시지 앞에 상대가 보낸 것도 이미 화면에서 봤으므로)
+    //     메시지를 저장한 "뒤" 의 시각이라 방금 저장한 메시지보다 늦음
+        if (isAdmin) {
+            roomEntity.setAdminReadAt(LocalDateTime.now());
+        } else {
+            roomEntity.setMemberReadAt(LocalDateTime.now());
+        }
+
+    //  9. 저장된 메시지 반환
+        return MessageDto.from(messageEntity);
+    }
+
+
+//  =====================================================================
+//  ⑧ 회원 탈퇴 처리 — MypageService.withdraw( ) 가 회원을 삭제하기 "직전" 에 부름
+//  - 채팅방과 대화는 지우지 않고 남김 (감사 로그처럼 증거 · 교육 자료)
+//  - 채팅방의 member_id 를 NULL 로 비움
+//      → room.member_id 는 FK 라서 , 비우지 않고 회원을 지우면 DB 가 삭제를 거부함 (감사 로그를 옮기는 이유와 같음)
+//      → 누구와의 상담이었는지는 채팅방의 회원 정보 복사본(manager_name , company_name)에 남아 있음
+//  - 상담 중이었으면 종료하고 , 대화에 탈퇴 이력을 남김
+//  - MypageService 와 같은 트랜잭션 안에서 실행됨
+//      → 탈퇴가 중간에 실패하면 여기서 바꾼 것도 같이 취소됨 (회원은 남았는데 방만 비워지는 일이 없음)
+//  =====================================================================
+    public void closeRoomByWithdrawal(String memberId){
+
+    //  1. 회원 번호가 없으면 할 일 없음
+        if (memberId == null) { return; }
+
+    //  2. 탈퇴하는 회원의 채팅방 찾기 (상담을 한 번도 안 했으면 방이 없음 → 할 일 없음)
+    //     SELECT * FROM room WHERE member_id = ?
+        RoomEntity roomEntity = roomRepository.findByMemberEntityMemberId(memberId).orElse(null);
+        if (roomEntity == null) { return; }
+
+    //  3. 상담 중이었으면 끄기 (off)
+    //     대화에 남길 문구도 상황에 따라 다르게 (상담 중에 탈퇴 / 이미 종료된 뒤에 탈퇴)
+        String withdrawText;
+        if (roomEntity.getStatus()) {
+            roomEntity.setStatus(false);
+            roomEntity.setClosedAt(LocalDateTime.now());
+            withdrawText = WITHDRAW_CLOSE_TEXT;
+        } else {
+            withdrawText = WITHDRAW_TEXT;
+        }
+
+    //  4. 대화에 탈퇴 이력 남기기 (SYSTEM 메시지)
+    //     INSERT INTO message (room_id , sender_type , sender_name , content , created_at) VALUES (...)
+        MessageEntity withdrawMessage = MessageEntity.builder()
+            .roomEntity(roomEntity)
+            .senderType(SENDER_SYSTEM)
+            .senderName(SYSTEM_NAME)
+            .content(withdrawText)
+            .build();
+        messageRepository.save(withdrawMessage);
+    //  ※ 6단계 : 여기에 웹소켓으로 바로 보내기 추가
+
+    //  5. 채팅방에서 회원 연결 끊기 (member_id → NULL)
+    //     UPDATE room SET member_id = NULL , status = false ... WHERE room_id = ?
+    //     ※ 이 UPDATE 는 MypageService 의 회원 DELETE 보다 먼저 실행됨
+    //       (JPA 는 모아 둔 SQL 을 실행할 때 INSERT → UPDATE → DELETE 순서로 실행)
+        roomEntity.setMemberEntity(null);
     }
 
 }
