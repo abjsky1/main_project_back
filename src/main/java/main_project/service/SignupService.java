@@ -10,6 +10,10 @@ import lombok.RequiredArgsConstructor;
 import main_project.model.dto.MemberDto;
 import main_project.model.entity.MemberEntity;
 import main_project.model.repository.MemberRepository;
+import main_project.model.entity.RoleEntity;
+import main_project.model.entity.SignupEntity;
+import main_project.model.repository.RoleRepository;
+import main_project.model.repository.SignupRepository;
 
 @Service 
 @RequiredArgsConstructor 
@@ -17,10 +21,31 @@ import main_project.model.repository.MemberRepository;
 public class SignupService {
 
     private final MemberRepository memberRepository;
+    private final RoleRepository roleRepository;
+    private final SignupRepository signupRepository;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     // 회원가입
     public boolean signup(MemberDto memberDto) {
+
+     if (memberDto.getSignupEntity() == null) {return false;}
+
+    String signupId = memberDto.getSignupEntity().getSignupId();
+
+    // 공개 회원가입에서는 화주·물류 유형만 허용
+    if (!"201".equals(signupId) && !"301".equals(signupId)) {return false;}
+
+    // DB에 등록된 가입 유형과 일반회원 권한 조회
+    SignupEntity signup = signupRepository.findById(signupId).orElse(null);
+
+    RoleEntity role = roleRepository.findById(1).orElse(null);
+
+    if (signup == null || role == null) {return false;}
+
+    // 요청에서 받은 권한·상태 대신 서버가 설정
+    memberDto.setSignupEntity(signup);
+    memberDto.setRoleEntity(role);
+    memberDto.setStatus(true);
 
     // memberDto 에 pk 값으로 UUID 를 넣어주기
     String pk = UUID.randomUUID().toString();

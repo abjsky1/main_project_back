@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import main_project.model.dto.LoginDto;
+import main_project.model.dto.MemberDto;
 import main_project.model.entity.MemberEntity;
 import main_project.model.repository.MemberRepository;
 
@@ -38,5 +39,21 @@ public class LoginService {
         return memberEntity;
 
     }
+
+    // 회원 ID로 회원 정보 조회
+    public MemberDto getMyInfo(String memberId) {
+
+    // 1. 회원 ID로 조회
+    MemberEntity memberEntity = memberRepository.findById(memberId).orElse(null);
+
+    // 2. 없는 회원이면 재발급 불가
+    if (memberEntity == null) {return null;}
+
+    // 3. 비활성 회원이면 재발급 불가
+    if (memberEntity.getStatus() == false) {return null;}
+
+    // 4. 회원 정보를 DTO로 변환하여 반환
+    return MemberDto.from(memberEntity);
+}
 }
 

@@ -54,4 +54,39 @@ public class MemberDto {
                 .status(status)
                 .build();
     }
+
+    // Entity -> DTO
+    public static MemberDto from(MemberEntity memberEntity) {
+
+        // 회원에게 연결된 권한·가입 유형 조회
+    RoleEntity role = memberEntity.getRoleEntity();
+    SignupEntity signup = memberEntity.getSignupEntity();
+
+    // 응답에 필요한 권한 정보만 복사
+    RoleEntity roleInfo = role == null ? null
+            : RoleEntity.builder()
+                    .roleId(role.getRoleId())
+                    .roleName(role.getRoleName())
+                    .build();
+
+    // 응답에 필요한 가입 유형 정보만 복사
+    SignupEntity signupInfo = signup == null ? null
+            : SignupEntity.builder()
+                    .signupId(signup.getSignupId())
+                    .signupType(signup.getSignupType())
+                    .build();
+
+    return MemberDto.builder()
+            .memberId(memberEntity.getMemberId())
+            .userEmail(memberEntity.getUserEmail())
+            .companyName(memberEntity.getCompanyName())
+            .managerName(memberEntity.getManagerName())
+            .businessRegNo(memberEntity.getBusinessRegNo())
+            .userPhone(memberEntity.getUserPhone())
+            .companyAddress(memberEntity.getCompanyAddress())
+            .status(memberEntity.getStatus())
+            .roleEntity(roleInfo)       // 추가
+            .signupEntity(signupInfo)   // 추가
+            .build();
+}
 }
