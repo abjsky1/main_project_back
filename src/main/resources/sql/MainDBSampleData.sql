@@ -33,7 +33,8 @@ INSERT INTO action (action_id, action_type, created_at, updated_at) VALUES
 (15, '매칭 조건 등록', NOW(), NOW()),
 (16, '매칭 조건 삭제', NOW(), NOW()),
 (17, '매칭 실행', NOW(), NOW()),
-(18, '사용자 상태 변경', NOW(), NOW());
+(18, '사용자 상태 변경', NOW(), NOW()),
+(19, '비밀번호 변경', NOW(), NOW());
 
 -- ============================================================================
 -- 1. [회원] member 테이블 (PK : UUID 문자열 , 총 201명 + 비회원 공통 계정 GUEST)

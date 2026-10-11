@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import main_project.model.dto.MypageDto;
+import main_project.model.dto.PasswordChangeDto;
 import main_project.model.dto.WithdrawDto;
 import main_project.service.MypageService;
 import main_project.service.RedisTokenService;
@@ -39,6 +40,21 @@ public class MypageController {
             @CookieValue (name = "AccessToken", required = false) String accessToken){
 
         return mypageService.infoUpdate(memberId, mypageDto, accessToken);
+    }
+
+    //  비밀번호 변경 , 성공하면 true
+    //  예) PUT /api/mypage/password   body { "currentPassword": "지금 비밀번호", "newPassword": "새 비밀번호" }
+    //  - 바꿀 회원은 쿠키(AccessToken) 속 회원 번호로 정함 (주소에 회원 번호를 받지 않음)
+    //  - 실패 : 쿠키 없음 · 만료 / 현재 비밀번호 틀림 / 새 비밀번호가 6~20자가 아님 / 새 비밀번호가 지금과 같음
+    //  - 입력값 검사까지 모두 서비스(MypageService.changePassword)가 함
+    //    → 나중에 다른 곳에서 서비스를 바로 불러 써도 똑같이 안전함
+    //  ※ 위의 PUT /{memberId} 와 주소 모양이 겹치지만 , 스프링은 글자가 정해진 주소(/password)를 먼저 고름
+    @PutMapping ("/password")
+    public boolean changePassword(
+            @RequestBody PasswordChangeDto passwordChangeDto,
+            @CookieValue (name = "AccessToken", required = false) String accessToken){
+
+        return mypageService.changePassword(accessToken, passwordChangeDto);
     }
 
     //  회원 탈퇴 (비밀번호 확인 → 회원 삭제 → 로그아웃 처리) , 성공하면 true
