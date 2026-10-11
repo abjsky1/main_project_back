@@ -3,7 +3,6 @@ package main_project.service;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -13,22 +12,34 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.RequiredArgsConstructor;
 import main_project.model.dto.ExchangeApiDto;
 import main_project.model.dto.ExchangerateDto;
 
 @Service
+@RequiredArgsConstructor 
 public class ExchangerateService {
 
     @Value("${api.public-data.service-key}")
     private String serviceKey;
 
+    // 조회한 전일 환율의 날짜
+    private LocalDate savedDate;
+    // 조회한 전일 환율 데이터
+    private Map<String, BigDecimal> savedRates;
+    private final SseService sseService;
     // WebClient 객체 생성
     private final WebClient webClient = WebClient.builder().build();
 
-    public List<ExchangerateDto> getExchangerate() {
+    @Scheduled(fixedRate = 600000)
+    public synchronized List<ExchangerateDto> getExchangerate() {
 
         // 1. 최신 환율 조회
         String url = "https://api.currencybeacon.com/v1/latest";
@@ -57,34 +68,40 @@ public class ExchangerateService {
         LocalDate previousDate = parseDate(response.getDate())
                 .minusDays(1);
 
-        // 3. 전일 환율 조회
-        String previousUrl = "https://api.currencybeacon.com/v1/historical";
-        previousUrl += "?api_key=" + serviceKey;
-        previousUrl += "&base=USD";
-        previousUrl += "&symbols=KRW,EUR,CNH,JPY";
-        previousUrl += "&date=" + previousDate;
+        // 3. 저장된 전일 환율이 없거나 비교 날짜가 바뀌면 조회
+        if (savedRates == null || !previousDate.equals(savedDate)) {
 
-        ExchangeApiDto previousBody = webClient.get()
-                .uri(previousUrl)
-                .retrieve()
-                .bodyToMono(ExchangeApiDto.class)
-                .block(Duration.ofSeconds(20));
+            String previousUrl = "https://api.currencybeacon.com/v1/historical";
+            previousUrl += "?api_key=" + serviceKey;
+            previousUrl += "&base=USD";
+            previousUrl += "&symbols=KRW,EUR,CNH,JPY";
+            previousUrl += "&date=" + previousDate;
 
-        if (previousBody == null || previousBody.getResponse() == null) {
-            throw new IllegalStateException("전일 환율 응답이 없습니다.");
+            ExchangeApiDto previousBody = webClient.get()
+                    .uri(previousUrl)
+                    .retrieve()
+                    .bodyToMono(ExchangeApiDto.class)
+                    .block();
+
+            if (previousBody == null || previousBody.getResponse() == null) {
+                throw new IllegalStateException("전일 환율 응답이 없습니다.");
+            }
+
+            ExchangeApiDto previousResponse = previousBody.getResponse();
+
+            validate(previousResponse);
+
+            if (!previousDate.equals(parseDate(previousResponse.getDate()))) {
+                throw new IllegalStateException("전일 환율 날짜가 다릅니다.");
+            }
+
+            // 정상적으로 조회한 데이터를 저장
+            savedRates = previousResponse.getRates();
+            savedDate = previousDate;
         }
 
-        ExchangeApiDto previousResponse = previousBody.getResponse();
-
-        validate(previousResponse);
-
-        // 요청한 날짜와 응답 날짜 확인
-        if (!previousDate.equals(parseDate(previousResponse.getDate()))) {
-            throw new IllegalStateException("전일 환율 날짜가 다릅니다.");
-        }
-
-        // 전일 환율 목록
-        Map<String, BigDecimal> previousRates = previousResponse.getRates();
+        // 새로 저장했거나 이전에 저장해 둔 전일 환율 사용
+        Map<String, BigDecimal> previousRates = savedRates;
 
         // 4. 최신 환율을 원화 기준으로 계산
         BigDecimal krw = rates.get("KRW");
@@ -129,11 +146,21 @@ public class ExchangerateService {
 
             ExchangerateDto dto = ExchangerateDto.builder()
                     .currency(code)
-                    .money(money.setScale(3, RoundingMode.HALF_UP))
+                    .money(money.setScale(1, RoundingMode.HALF_UP))
                     .inderate(inderate)
                     .build();
 
             result.add(dto);
+        }
+        
+        ObjectMapper objectMapper = new ObjectMapper();
+        String json = null;
+        try {
+            json = objectMapper.writeValueAsString(result);
+            // SSE 호출 , 클라이언트에게 전송 
+            sseService.onMessage(json);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
         }
 
         return result;
