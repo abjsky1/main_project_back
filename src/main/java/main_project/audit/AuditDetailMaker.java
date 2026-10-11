@@ -64,6 +64,11 @@ public class AuditDetailMaker {
             return detail + numberText(request);
         }
 
+    //  고객센터 상담 종료 : 주소의 방 번호  예) "고객센터 상담 종료 (#3)"
+        else if (actionType.equals("상담 종료")) {
+            return detail + numberText(request);
+        }
+
     //  매칭 거절 / 반려 : 주소의 번호 + 거절 사유
         else if (actionType.equals("매칭 거절") || actionType.equals("매칭 반려")) {
             return detail + numberText(request) + rejectReasonText(request, args);
