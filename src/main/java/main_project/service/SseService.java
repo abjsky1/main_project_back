@@ -1,9 +1,7 @@
 package main_project.service;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.springframework.stereotype.Service;
@@ -11,35 +9,57 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
 public class SseService {
-    // 1. 연결된 클라이언트들의 정보 보관하는 리스트 
-    // * 서버가 클라이언트에게 비동기 요청 보내기 위한 HTTP 응답 (스트리밍) 객체 , 연결유지 
-    // * 동기/비동기 : 동기화( 하나의 메소드를 순차적으로 실행 ) , 비동기( 하나의 메소드를 동시실행 )
-    // * ArrayList() 동기화지원안함 , Vector() 동기화지원함.
-    // * 동기화 필요목적: 하나의 서버가 구독과 메시지전송 동시 다발적으로 순차처리 
-    // CopyOnWriteArrayList() : 여러개 요청들을 동시에 접속,종료,메시지전송 동시화 제공
-    private final List< SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
-    // 2. 클라이언트 구독 처리( SseEmitter 생성하여 리스트에 저장 )
-    public SseEmitter subscribe( ){
-        SseEmitter emitter = new SseEmitter(0L); // 2-1 : SseEmitter 객체 생성 
-        emitters.add( emitter ); // 2-2 : 리스트에 저장 
-        // 2-4: 안전하게 클라이언트 연결이 비정상이면 리스트에서 삭제
-        // * 리액트에서 새로고침(F5) 중복되는 구독 신청으로 문제발생  
-        emitter.onCompletion( () -> emitters.remove(emitter) );
-        emitter.onTimeout( () -> emitters.remove(emitter) );
-        emitter.onError( (e) -> emitters.remove(emitter) );
+    private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
-        return emitter; // 2-3 : 생성된 객체를 반환 
-    }
-    // 3. 서버가 클라이언트에게 메시지 전송 
-    public void onMessage( String message ){
-        // 3-1 : 현재 리스트에 저장/접속/구독 된 emitter 들에게 메시지 보내기 
-        for( SseEmitter emitter : emitters ){
-            // 3-2 : .sned( SseEmitter.event().name("구독식별").data(내용물) ); , 일반예외
-            try{ 
-                emitter.send( SseEmitter.event().name("notice").data(message) );
-            // 3-3 : 메시지 전송 실패시 실패한 emitter 리스트에 제외
-            }catch(IOException e ){ emitters.remove( emitter ); } 
+    // 마지막으로 조회한 환율 JSON 저장
+    private String latestJson;
+
+    // 구독과 환율 갱신이 동시에 처리되지 않도록 synchronized 추가
+    public synchronized SseEmitter subscribe() {
+
+        SseEmitter emitter = new SseEmitter();
+
+        emitter.onCompletion(() -> emitters.remove(emitter));
+
+        emitter.onTimeout(() -> {
+            emitters.remove(emitter);
+            emitter.complete(); // [추가] 시간 초과 시 연결 종료
+        });
+
+        emitter.onError(error -> emitters.remove(emitter));
+
+        emitters.add(emitter);
+
+        // 새로 접속한 사용자에게 저장된 환율 즉시 전송
+        if (latestJson != null) {
+            send(emitter, latestJson);
         }
+
+        return emitter;
+    }
+
+    // subscribe()와 같은 잠금을 사용하도록 synchronized 추가
+    public synchronized void onMessage(String message) {
+
+        // 접속한 사용자가 없어도 마지막 환율 저장
+        latestJson = message;
+        for (SseEmitter emitter : emitters) {
+            // 공통 전송 메서드 호출
+            send(emitter, message);
+        }
+    }
+
+    // 기존 onMessage()의 전송 코드를 공통 메서드로 분리
+    // 구독 직후 전송과 전체 사용자 전송에서 함께 사용
+    private void send(SseEmitter emitter, String message) {
+        try {emitter.send( SseEmitter.event()
+                            .name("notice")
+                            .data(message));
+        } catch (IOException e) {
+            emitters.remove(emitter);
+        } catch (IllegalStateException e) {
+            // [추가] 사용할 수 없는 연결 제거 및 오류 처리
+            emitters.remove(emitter); emitter.completeWithError(e);}
     }
 }
