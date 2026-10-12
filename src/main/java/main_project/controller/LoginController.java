@@ -79,16 +79,16 @@ public class LoginController {
         return true; } catch ( Exception e ) { e.printStackTrace(); return false;}
     }
 
-        // 현재 로그인한 회원 정보 조회
-        @GetMapping("/me")
-        public MemberDto getMyInfo(@CookieValue(value = "AccessToken", required = false)String accessToken) {
-            // 1. AccessToken 검증 후 회원 ID 확인
-            String memberId = jwtUtil.getMemberIdFromToken(accessToken);
-            // 2. 토큰이 없거나 검증에 실패하면 조회 중단
-            if (memberId == null) {return null;}
-            // 3. 서비스에서 회원 조회·활성 상태 확인 후 DTO 반환
-            return loginService.getMyInfo(memberId);
-        }
+    // 현재 로그인한 회원 정보 조회
+    @GetMapping("/me")
+    public MemberDto getMyInfo(@CookieValue(value = "AccessToken", required = false)String accessToken) {
+        // 1. AccessToken 검증 후 회원 ID 확인
+        String memberId = jwtUtil.getMemberIdFromToken(accessToken);
+        // 2. 토큰이 없거나 검증에 실패하면 조회 중단
+        if (memberId == null) {return null;}
+        // 3. 서비스에서 회원 조회·활성 상태 확인 후 DTO 반환
+        return loginService.getMyInfo(memberId);
+    }
 
     // [2] 로그아웃
     @PostMapping ("/logout")
@@ -97,14 +97,14 @@ public class LoginController {
         // 1. AcessToken이 존재하는 경우
         if (accessToken != null) {
 
-        // 2. AccessToken 에서 memberId 추출
-        String memberId = jwtUtil.getMemberIdFromToken(accessToken);
+            // 2. AccessToken 에서 memberId 추출
+            String memberId = jwtUtil.getMemberIdFromToken(accessToken);
 
-        // 3. memberId가 정상적으로 추출 -> Redis의 RefreshToken 삭제
-        if (memberId != null) {
-            redisTokenService.deleteRefreshToken(memberId);
+            // 3. memberId가 정상적으로 추출 -> Redis의 RefreshToken 삭제
+            if (memberId != null) {
+                redisTokenService.deleteRefreshToken(memberId);
+            }
         }
-}
 
         // 로그인 때 생성한 login_member 쿠키를 같은 이름으로 다시 만들고 유효시간을 0으로 설정 (AccessToken 쿠키 삭제)
         ResponseCookie accesscookie = ResponseCookie

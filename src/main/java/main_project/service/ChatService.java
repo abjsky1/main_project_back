@@ -4,8 +4,12 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import lombok.RequiredArgsConstructor;
 import main_project.model.dto.MessageDto;
@@ -29,10 +33,12 @@ import main_project.model.repository.RoomRepository;
 //  - 권한이 없거나 할 수 없는 일이면 null / false 를 돌려줌 (AuthorizationService 와 같은 방식)
 //  - 메소드마다 처음부터 끝까지 한 곳에서 처리 (다른 메소드를 타고 들어가지 않게)
 //    → 비슷한 코드가 여러 메소드에 반복되므로 , 규칙을 바꿀 때는 같은 번호 주석이 있는 곳을 같이 고칠 것
-//    → 메시지를 저장하는 곳마다 "※ 6단계" 표시 : 웹소켓으로 바로 보내는 코드를 넣을 자리
+//  - 웹소켓 실시간 보내기 : 메시지를 저장하는 곳마다 "※ 웹소켓 보내기 예약" 한 줄
+//    → 저장이 확정(commit)된 "뒤" 에 Spring 이 맨 아래 ⑨ sendAfterCommit 을 자동으로 부름
 //
 //  [방 관련]     ① 내 채팅방 보기  ② 상담 시작(on)  ③ 상담 종료(off)  ④ 관리자 채팅방 목록
 //  [메시지 관련] ⑤ 메시지 목록  ⑥ 읽음 처리  ⑦ 메시지 보내기  ⑧ 탈퇴 처리
+//  [웹소켓]      ⑨ 저장이 확정된 뒤 보내기
 //  =====================================================================
 @Service
 @RequiredArgsConstructor
@@ -60,9 +66,19 @@ public class ChatService {
 //  메시지 내용 최대 글자 수 (MessageEntity 의 content 칸 길이와 같게 — AuditService 의 DETAIL_MAX_LENGTH 와 같은 방식)
     private static final int CONTENT_MAX_LENGTH = 1000;
 
+//  관리자 권한 번호 (role 테이블 : 1 = ROLE_USER , 2 = ROLE_ADMIN — MypageService 와 같은 방식)
+//  ⑦ 메시지 보내기에서 "지금도 관리자인지" 를 DB 값으로 다시 확인할 때 사용
+    private static final int ROLE_ADMIN_ID = 2;
+
     private final RoomRepository roomRepository;
     private final MessageRepository messageRepository;
     private final MemberRepository memberRepository;
+
+//  웹소켓으로 보내는 도구 (springweb day062 MessageController 의 messageTemp 와 같은 것)
+    private final SimpMessageSendingOperations messageTemplate;
+
+//  "저장이 확정되면 보내 줘" 하고 예약하는 도구 (예약한 내용은 ⑨ sendAfterCommit 이 받음)
+    private final ApplicationEventPublisher eventPublisher;
 
 
 //  =====================================================================
@@ -175,7 +191,8 @@ public class ChatService {
                 .content(OPEN_TEXT)
                 .build();
             messageRepository.save(openMessage);
-        //  ※ 6단계 : 여기에 웹소켓으로 바로 보내기 추가
+        //       ※ 웹소켓 보내기 예약 — 저장이 확정된 뒤 ⑨ 에서 회원 화면 · 관리자 화면으로 보냄
+            eventPublisher.publishEvent(MessageDto.from(openMessage));
 
         //  4-6. 고객센터 인사 남기기 (ADMIN 메시지)
         //       특정 상담원이 아니라 자동으로 보내는 인사라 이름을 "고객센터" 로
@@ -186,7 +203,8 @@ public class ChatService {
                 .content(WELCOME_TEXT)
                 .build();
             messageRepository.save(welcomeMessage);
-        //  ※ 6단계 : 여기에 웹소켓으로 바로 보내기 추가
+        //       ※ 웹소켓 보내기 예약 (4-5 와 같음)
+            eventPublisher.publishEvent(MessageDto.from(welcomeMessage));
 
         //  4-7. 회원은 방금 연 화면을 보고 있으므로 여기까지 읽은 것으로 (인사가 "안 읽음 1" 로 뜨지 않게)
         //       메시지를 저장한 "뒤" 의 시각이라 방금 저장한 메시지보다 늦음
@@ -259,7 +277,8 @@ public class ChatService {
             .content(closeText)
             .build();
         messageRepository.save(closeMessage);
-    //  ※ 6단계 : 여기에 웹소켓으로 바로 보내기 추가
+    //     ※ 웹소켓 보내기 예약 — 회원 화면은 이 메시지의 roomStatus(false)를 보고 바로 입력창을 잠금
+        eventPublisher.publishEvent(MessageDto.from(closeMessage));
 
         return true;
     }
@@ -403,12 +422,14 @@ public class ChatService {
 //  =====================================================================
 //  ⑦ 메시지 보내기 (그 방의 회원 또는 관리자) — 웹소켓 /pub/chat/message (6단계에서 연결)
 //  - 받는 값 : 어느 방에(roomId) , 무슨 내용을(content) — MessageSendDto
-//  - 누가 보냈는지는 받지 않음 → 컨트롤러가 웹소켓 연결 때 쿠키로 확인한 memberId , isAdmin 으로 정함
+//  - 누가 보냈는지는 받지 않음 → 컨트롤러가 웹소켓 연결 때 쿠키로 확인한 memberId 로 정함
+//  - 관리자인지는 연결할 때 값을 믿지 않고 , 메시지마다 DB 에서 다시 확인 (3 · 4번)
+//    → 연결된 채로 관리자 권한을 빼거나 비활성 처리해도 다음 메시지부터 바로 반영됨
 //  - 저장하지 않는 경우 (null 반환)
-//      로그인 안 함 , 내용이 비었거나 1000자 초과 , 없는 방 , 남의 방 , 종료된 방 , 비활성 회원
+//      로그인 안 함 , 내용이 비었거나 1000자 초과 , 없는 회원 · 비활성 회원 , 없는 방 , 남의 방 , 종료된 방
 //  - 돌려주는 것 : 저장된 메시지 (상담원 이름 그대로 — 관리자 기준)
 //  =====================================================================
-    public MessageDto sendMessage(MessageSendDto messageSendDto, String memberId, boolean isAdmin){
+    public MessageDto sendMessage(MessageSendDto messageSendDto, String memberId){
 
     //  1. 로그인 안 했거나 , 요청 내용이 없으면 null
         if (memberId == null) { return null; }
@@ -419,27 +440,31 @@ public class ChatService {
         String content = messageSendDto.getContent().trim();
         if (content.isEmpty() || content.length() > CONTENT_MAX_LENGTH) { return null; }
 
-    //  3. 방 찾기 (없으면 null)
+    //  3. 보낸 사람 확인 (없는 회원이거나 비활성 회원이면 null)
+    //     권한 확인(5번)에 관리자인지가 필요해서 , 방보다 먼저 조회
+    //     SELECT * FROM member WHERE member_id = ?
+        MemberEntity senderEntity = memberRepository.findById(memberId).orElse(null);
+        if (senderEntity == null || senderEntity.getStatus() == false) { return null; }
+
+    //  4. 관리자인지 지금 DB 값으로 확인 (role 2 = 관리자)
+        boolean isAdmin = senderEntity.getRoleEntity().getRoleId() == ROLE_ADMIN_ID;
+
+    //  5. 방 찾기 (없으면 null)
     //     SELECT * FROM room WHERE room_id = ?
         RoomEntity roomEntity = roomRepository.findById(messageSendDto.getRoomId()).orElse(null);
         if (roomEntity == null) { return null; }
 
-    //  4. 권한 확인 : 관리자는 모든 방 , 회원은 내 방만 (③ 상담 종료의 2번과 같음)
+    //  6. 권한 확인 : 관리자는 모든 방 , 회원은 내 방만 (③ 상담 종료의 2번과 같음)
         if (!isAdmin) {
             MemberEntity owner = roomEntity.getMemberEntity();
             boolean isOwner = owner != null && memberId.equals(owner.getMemberId());
             if (!isOwner) { return null; }
         }
 
-    //  5. 종료된 방이면 null (상담 중일 때만 대화할 수 있음 — 회원은 [상담 시작] 으로 다시 켜야 함)
+    //  7. 종료된 방이면 null (상담 중일 때만 대화할 수 있음 — 회원은 [상담 시작] 으로 다시 켜야 함)
         if (roomEntity.getStatus() == false) { return null; }
 
-    //  6. 보낸 사람 확인 (이름을 복사하려고 조회 , 없는 회원이거나 비활성 회원이면 null)
-    //     SELECT * FROM member WHERE member_id = ?
-        MemberEntity senderEntity = memberRepository.findById(memberId).orElse(null);
-        if (senderEntity == null || senderEntity.getStatus() == false) { return null; }
-
-    //  7. 메시지 저장
+    //  8. 메시지 저장
     //     - 보낸 사람 종류 : 관리자면 ADMIN , 아니면 MEMBER
     //     - 보낸 사람 이름 : 보낸 그 순간의 이름을 복사 (관리자면 상담원 이름 → 누가 답했는지 남음)
     //     INSERT INTO message (room_id , sender_type , sender_name , content , created_at) VALUES (...)
@@ -451,9 +476,10 @@ public class ChatService {
             .content(content)
             .build();
         messageEntity = messageRepository.save(messageEntity);
-    //  ※ 6단계 : 여기에 웹소켓으로 바로 보내기 추가
+    //     ※ 웹소켓 보내기 예약 — 보낸 사람 화면에도 이 경로로 말풍선이 뜸 (보낸 사람도 같은 주소를 구독 중)
+        eventPublisher.publishEvent(MessageDto.from(messageEntity));
 
-    //  8. 보낸 사람은 자기 메시지까지 읽은 것으로 (내가 보낸 메시지 앞에 상대가 보낸 것도 이미 화면에서 봤으므로)
+    //  9. 보낸 사람은 자기 메시지까지 읽은 것으로 (내가 보낸 메시지 앞에 상대가 보낸 것도 이미 화면에서 봤으므로)
     //     메시지를 저장한 "뒤" 의 시각이라 방금 저장한 메시지보다 늦음
         if (isAdmin) {
             roomEntity.setAdminReadAt(LocalDateTime.now());
@@ -461,7 +487,7 @@ public class ChatService {
             roomEntity.setMemberReadAt(LocalDateTime.now());
         }
 
-    //  9. 저장된 메시지 반환
+    //  10. 저장된 메시지 반환
         return MessageDto.from(messageEntity);
     }
 
@@ -506,13 +532,53 @@ public class ChatService {
             .content(withdrawText)
             .build();
         messageRepository.save(withdrawMessage);
-    //  ※ 6단계 : 여기에 웹소켓으로 바로 보내기 추가
+    //     ※ 웹소켓 보내기 예약 — 탈퇴(회원 삭제)까지 모두 성공해야 보내짐 (실패하면 예약도 취소)
+        eventPublisher.publishEvent(MessageDto.from(withdrawMessage));
 
     //  5. 채팅방에서 회원 연결 끊기 (member_id → NULL)
     //     UPDATE room SET member_id = NULL , status = false ... WHERE room_id = ?
     //     ※ 이 UPDATE 는 MypageService 의 회원 DELETE 보다 먼저 실행됨
     //       (JPA 는 모아 둔 SQL 을 실행할 때 INSERT → UPDATE → DELETE 순서로 실행)
         roomEntity.setMemberEntity(null);
+    }
+
+
+//  =====================================================================
+//  ⑨ 웹소켓으로 보내기 — 위의 "※ 웹소켓 보내기 예약" 이 있으면 Spring 이 자동으로 부름 (직접 부르지 않음)
+//
+//  - 왜 저장한 자리에서 바로 보내지 않고 예약하는가
+//      이 서비스의 메소드들은 @Transactional 이라 , 메소드가 "끝날 때" DB 저장이 확정(commit)됨
+//      저장한 자리에서 바로 보내면 , 확정되기 "전" 에 화면이 알림을 받아서 목록을 다시 조회했을 때
+//      새 메시지가 아직 안 보일 수 있음
+//        바로 보내기 : 알림 → 화면이 목록 조회 (아직 commit 전이라 옛날 목록) → commit
+//        예약해서 보내기 : commit → 알림 → 화면이 목록 조회 (새 목록)
+//      또 저장이 실패해서 취소(rollback)되면 예약도 같이 취소됨 → 저장 안 된 메시지가 화면에 뜨는 일이 없음
+//
+//  - @TransactionalEventListener : 예약된 값(MessageDto)을 받아서 , 저장이 확정된 "뒤" 에 실행
+//    (AuditService 의 @EventListener(ApplicationReadyEvent.class) 처럼 Spring 이 알아서 부르는 메소드)
+//  - @Transactional (propagation = NOT_SUPPORTED) : 이 메소드는 트랜잭션 없이 실행
+//    (DB 작업 없이 보내기만 함 + Spring 규칙 : 확정 뒤에 실행되는 메소드는 트랜잭션 설정을 따로 표시해야 함)
+//
+//  - 보내는 곳 2군데
+//      /sub/chat/admin         : 관리자 화면 (모든 방 , 상담원 이름 그대로)
+//      /sub/chat/room/{roomId} : 그 방의 회원 화면 (상담원 이름은 "고객센터" 로)
+//  =====================================================================
+    @TransactionalEventListener
+    @Transactional (propagation = Propagation.NOT_SUPPORTED)
+    public void sendAfterCommit(MessageDto messageDto){
+
+    //  1. 관리자 화면으로 보내기 (상담원 이름 그대로)
+    //     convertAndSend( 보낼 주소 , 내용물 ) : day062 와 같음 — 내용물은 JSON 글자로 바뀌어서 전달됨
+        messageTemplate.convertAndSend("/sub/chat/admin", messageDto);
+
+    //  2. 회원에게 보낼 때는 상담원(ADMIN) 이름을 "고객센터" 로 바꿈 (① 의 4번과 같은 규칙)
+    //     1번에서 이미 JSON 글자로 바뀌어 보내졌기 때문에 , 지금 바꿔도 관리자에게 간 내용은 그대로
+        if (SENDER_ADMIN.equals(messageDto.getSenderType())) {
+            messageDto.setSenderName(CENTER_NAME);
+        }
+
+    //  3. 그 방의 회원 화면으로 보내기
+        messageTemplate.convertAndSend("/sub/chat/room/" + messageDto.getRoomId(), messageDto);
     }
 
 }

@@ -36,4 +36,9 @@ out/
 ### VS Code ###
 .vscode/
 
-application.properties
+src/main/resources/application.properties
+
+# 빌드 결과물에도 복사본이 생기니까 같이 제외
+build/
+target/
+bin/
