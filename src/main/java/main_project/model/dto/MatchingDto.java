@@ -1,3 +1,4 @@
+
 package main_project.model.dto;
 
 import java.time.LocalDateTime;
@@ -7,10 +8,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@AllArgsConstructor 
-@NoArgsConstructor 
-@Builder 
-@Data 
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Data
 public class MatchingDto {
 
     // 매칭 PK
@@ -42,8 +43,27 @@ public class MatchingDto {
     private String logisticsBizNumber;
 
     private String logisticsPhone;
-    
+
     private String logisticsAddress;
+
+
+    // [추가] 운송 서비스 정보 (물류기업 매칭 조건에서 가져옴)
+
+    // 운송 방식 : true = 해상, false = 항공
+    private Boolean logisticsTransportType;
+
+    // 정기노선 여부
+    private Boolean logisticsRegularRoute;
+
+    // 직항 여부
+    private Boolean logisticsDirectRoute;
+
+    // 해당 HS코드 취급 경험(회)
+    private Integer logisticsExperienceCount;
+
+    // 평균 운송 기간(일)
+    private Integer logisticsAverageTransitDays;
+
 
     // 매칭 점수
     private Integer routeScore;
@@ -57,6 +77,7 @@ public class MatchingDto {
     private Integer experienceScore;
 
     private Integer totalScore;
+
 
     // 관리자 검토 상태
     // PENDING / APPROVED / REJECTED
@@ -73,6 +94,7 @@ public class MatchingDto {
     // 최종 매칭 상태
     // PENDING / COMPLETED / FAILED
     private String finalStatus;
+
 
     // 추천 이유
     private String recommendReason;

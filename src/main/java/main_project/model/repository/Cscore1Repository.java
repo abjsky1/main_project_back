@@ -20,10 +20,23 @@ public interface Cscore1Repository extends JpaRepository<Cscore1Entity, Integer>
     // [1] 회원별 매칭 조건 조회 (기존 코드)
     List<Cscore1Entity> findByMemberEntityMemberId(String memberId);
 
-
     // [2] 매칭에 동의한 화주 조건만 조회 (추가)
     List<Cscore1Entity> findByMatchingAgreeTrue();
 
+    // [추가] 새로 등록한 물류기업의 노선과 일치하는 화주 조건만 먼저 조회
+    @Query("SELECT c FROM Cscore1Entity c JOIN FETCH c.memberEntity mem WHERE c.matchingAgree = true "
+            + "AND mem.status = true "
+            + "AND c.countryId = :countryId "
+            + "AND c.tradeType = :tradeType "
+            + "AND c.transportType = :transportType "
+            + "AND c.departure = :departure "
+            + "AND c.arrival = :arrival")
+    List<Cscore1Entity> findMatchingCandidatesForLogistics(
+            @Param("countryId") Integer countryId,
+            @Param("tradeType") Boolean tradeType,
+            @Param("transportType") Boolean transportType,
+            @Param("departure") Integer departure,
+            @Param("arrival") Integer arrival);
 
     // [3] 화주 조건 조회 및 DB 잠금 (추가)
     // 자동 매칭 및 매칭 요청 상태 변경 시 사용
