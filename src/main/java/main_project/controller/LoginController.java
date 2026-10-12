@@ -14,10 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import main_project.model.dto.LoginDto;
-import main_project.model.dto.MemberDto;
+import main_project.model.entity.MemberEntity;
 import main_project.service.LoginService;
 import main_project.service.RedisTokenService;
 import main_project.util.JwtUtil;
+import main_project.model.dto.MemberDto;
 
 @RestController
 @RequestMapping("/api/login")
@@ -28,15 +29,15 @@ public class LoginController {
     private final JwtUtil jwtUtil;
     private final RedisTokenService redisTokenService;
 
-    // [1] 로그인 + 쿠키 ( 인증 성공시 JWT 쿠키 2개 발급 + 회원 정보 반환 / 실패시 null )
-    @PostMapping
-    public MemberDto login(@RequestBody LoginDto loginDto , HttpServletResponse response) {
-
-        // 1. 서비스에게 로그인 검증 요청
-        MemberDto result = loginService.login(loginDto);
+    // [1] 로그인
+    @PostMapping 
+    public boolean login(@RequestBody LoginDto loginDto , HttpServletResponse response) {
+        
+        // 1. 서비스에게 로그인 검증 요청 
+        MemberEntity result = loginService.login(loginDto);
 
         // 2. 로그인 실패
-        if (result == null) {return null;}
+        if (result == null) {return false;}
 
         try{
         // 3. 로그인 성공시 memberId를 이용해서 JWT Access token 생성
@@ -44,7 +45,8 @@ public class LoginController {
         String refreshToken = jwtUtil.createRefreshToken(result.getMemberId());
 
     
-        // 4. Access Token을 쿠키에 저장
+
+           // 4. Access Token을 쿠키에 저장
         ResponseCookie accesscookie = ResponseCookie
                                 .from("AccessToken", accessToken)
                                 .path("/")
@@ -73,25 +75,22 @@ public class LoginController {
         response.addHeader(HttpHeaders.SET_COOKIE, refreshcookie.toString());
 
 
-        // 8. 로그인한 회원 정보 반환 (프론트가 이 값으로 화면의 로그인 상태를 만듦)
-        return result; } catch ( Exception e ) { e.printStackTrace(); return null;}
+    //  교수님 질문 : 쿠키 저장됐는지 검증하고 boolean 반환하는 방법.
+        return true; } catch ( Exception e ) { e.printStackTrace(); return false;}
     }
 
-    // [2] 내 정보 조회 + 쿠키 ( 이미 로그인된 회원이 내 정보 요청 , 새로고침 후 로그인 상태 복구용 )
-    @GetMapping ("/me")
-    public MemberDto getMyInfo(@CookieValue(value = "AccessToken", required = false) String accessToken) {
+        // 현재 로그인한 회원 정보 조회
+        @GetMapping("/me")
+        public MemberDto getMyInfo(@CookieValue(value = "AccessToken", required = false)String accessToken) {
+            // 1. AccessToken 검증 후 회원 ID 확인
+            String memberId = jwtUtil.getMemberIdFromToken(accessToken);
+            // 2. 토큰이 없거나 검증에 실패하면 조회 중단
+            if (memberId == null) {return null;}
+            // 3. 서비스에서 회원 조회·활성 상태 확인 후 DTO 반환
+            return loginService.getMyInfo(memberId);
+        }
 
-        // 1. 쿠키가 없으면 비로그인
-        if (accessToken == null) { return null; }
-
-        // 2. 쿠키에 저장된 token 으로 회원 번호 찾기 (만료되었거나 가짜 토큰이면 null)
-        String memberId = jwtUtil.getMemberIdFromToken(accessToken);
-        if (memberId == null) { return null; }
-
-        // 3. 로그인 중이면 서비스에게 회원 정보 요청
-        return loginService.getMyInfo(memberId);
-    }
-
+    // [2] 로그아웃
     @PostMapping ("/logout")
     public boolean logout(@CookieValue(value = "AccessToken", required = false) String accessToken, HttpServletResponse response) {
 
@@ -130,9 +129,59 @@ public class LoginController {
         // 브라우저에게 쿠키 만료 응답 헤더 전달
         response.addHeader(HttpHeaders.SET_COOKIE, accesscookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshcookie.toString());
+        return true; }
 
-        return true;
+        // [3] RefreshToken 검증 후 토큰 재발급
+        @PostMapping ("/reissue")
+        public MemberDto reissue( @CookieValue (value = "RefreshToken" , required = false) String refreshToken , HttpServletResponse response)
+        {if( refreshToken == null){ return null;}
+
+        String memberId = jwtUtil.getMemberIdFromRefreshToken(refreshToken);
+
+        if(memberId == null) { return null;}
+
+        String savedRefreshToken = redisTokenService.getRefreshToken(memberId);
+
+        if (savedRefreshToken == null || !refreshToken.equals(savedRefreshToken)) {redisTokenService.deleteRefreshToken(memberId); return null;}
+
+        // 회원 존재·활성 상태 확인
+        MemberDto member = loginService.getMyInfo(memberId);
+
+        if (member == null) {redisTokenService.deleteRefreshToken(memberId);return null;}
+
+
+        String newAccessToken = jwtUtil.createAccessToken(memberId);
+        String newRefreshToken= jwtUtil.createRefreshToken(memberId);
+
+        ResponseCookie accessCookie = ResponseCookie
+                                        .from("AccessToken" , newAccessToken)
+                                        .path("/")
+                                        .maxAge(Duration.ofMinutes(20))
+                                        .httpOnly(true)
+                                        .secure(false)
+                                        .sameSite("Lax")
+                                        .build();
+           // 9. RefreshToken 쿠키 생성: 유효기간 7일
+        ResponseCookie refreshCookie = ResponseCookie
+                                        .from("RefreshToken", newRefreshToken)
+                                        .path("/")
+                                        .maxAge(Duration.ofDays(7))
+                                        .httpOnly(true)
+                                        .secure(false)
+                                        .sameSite("Lax")
+                                        .build();
+
+            // 10. 응답 헤더에 쿠키 등록
+        redisTokenService.setRefreshToken(memberId, newRefreshToken);
+
+        response.addHeader(HttpHeaders.SET_COOKIE,accessCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE,refreshCookie.toString());
+
+
+        return member;
+    }
 
     }
-}
+
+
 

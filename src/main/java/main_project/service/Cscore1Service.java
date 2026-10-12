@@ -35,6 +35,8 @@ public class Cscore1Service {
 
     private final MatchingRepository matchingRepository;
 
+    private final MatchingService matchingService;
+
     // [1] 화주 매칭 조건 등록
     @Transactional 
     public boolean cscoreWrite( 
@@ -51,6 +53,13 @@ public class Cscore1Service {
 
                 return false;
                 
+            }
+
+            // [추가] 비활성 화주 회원은 매칭 조건 등록 불가
+            if (memberEntity.getStatus() == null || memberEntity.getStatus() == false) {
+
+                return false;
+
             }
 
             // 2. Cscore1Dto를 Cscore1Entity로 변환
@@ -85,6 +94,10 @@ public class Cscore1Service {
             // 5. Cscore2와 Cscore3의 PK가 정상적으로 생성되었는지 확인
             //    둘 다 저장되었다면 전체 화주 매칭 조건 등록 성공
             if (savedCscore2.getCscore2Id() != null && savedCscore3.getCscore3Id() != null ) {
+                if (savedCscore1.getMatchingAgree() != null && savedCscore1.getMatchingAgree() == true) {
+                    matchingService.matchingWrite(savedCscore1.getCscore1Id());
+                }
+                // 후보가 없어도 조건 저장 자체는 성공입니다.
                 return true;
             }
 
@@ -206,20 +219,26 @@ public class Cscore1Service {
 
         if (cscore1Entity == null) { return false; }
 
-        // 2. Matching 전체 조회
-        List<MatchingEntity> matchingEntities = matchingRepository.findAll();
+        // 2. 해당 화주 조건의 매칭 결과만 조회
+        List<MatchingEntity> matchingEntities = matchingRepository.findByCscore1EntityCscore1Id(cscore1Id);
 
-        // 3. 이미 매칭된 조건인지 확인
+        // 3. 요청/완료/거절된 매칭은 삭제 불가, 자동 추천 후보만 삭제 가능
         for (MatchingEntity matchingEntity : matchingEntities) {
 
-            if (matchingEntity.getCscore1Entity().getCscore1Id().equals(cscore1Id)) {
-
-                // 이미 매칭된 조건이면 삭제 불가
+            if (!"PENDING".equals(matchingEntity.getFinalStatus())
+                    || !"WAITING".equals(matchingEntity.getShipperStatus())
+                    || !"WAITING".equals(matchingEntity.getLogisticsStatus())) {
                 return false;
-
             }
-
         }
+
+        // 4. 상태가 변경되지 않은 자동 추천 후보는 먼저 삭제
+        for (MatchingEntity matchingEntity : matchingEntities) {
+            matchingRepository.delete(matchingEntity);
+        }
+
+        // 삭제 SQL을 먼저 실행해 외래키 참조 충돌 방지
+        matchingRepository.flush();
 
         // 4. 연결된 Cscore2 조회
         Cscore2Entity cscore2Entity = cscore2Repository.findByCscore1Entity(cscore1Entity).orElse(null);
