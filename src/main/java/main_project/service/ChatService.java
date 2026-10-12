@@ -441,7 +441,7 @@ public class ChatService {
         if (content.isEmpty() || content.length() > CONTENT_MAX_LENGTH) { return null; }
 
     //  3. 보낸 사람 확인 (없는 회원이거나 비활성 회원이면 null)
-    //     권한 확인(5번)에 관리자인지가 필요해서 , 방보다 먼저 조회
+    //     권한 확인(6번)에 관리자인지가 필요해서 , 방보다 먼저 조회
     //     SELECT * FROM member WHERE member_id = ?
         MemberEntity senderEntity = memberRepository.findById(memberId).orElse(null);
         if (senderEntity == null || senderEntity.getStatus() == false) { return null; }
