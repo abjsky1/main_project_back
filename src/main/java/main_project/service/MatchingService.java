@@ -875,6 +875,63 @@ public class MatchingService {
 
     }
 
+        // 자동 매칭 연결 목록 조회 (관리자)
+    public List<MatchingDto> matchingRecommendedRead() {
+
+        List<MatchingEntity> matchingEntities = matchingRepository.findRecommendedMatchings();
+
+        return matchingDtoListFrom(matchingEntities);
+
+    }
+
+
+    //  화주사만 승인한 목록 조회 (관리자)
+    public List<MatchingDto> matchingShipperRequestedRead() {
+
+        List<MatchingEntity> matchingEntities = matchingRepository.findShipperRequestedMatchings();
+
+        return matchingDtoListFrom(matchingEntities);
+
+    }
+
+
+    //  최종 매칭 성사 목록 조회 (관리자)
+    public List<MatchingDto> matchingCompletedRead() {
+
+        List<MatchingEntity> matchingEntities = matchingRepository.findCompletedMatchings();
+
+        return matchingDtoListFrom(matchingEntities);
+
+    }
+
+
+    // 최종 매칭 실패 목록 조회 (관리자)
+    public List<MatchingDto> matchingFailedRead() {
+
+        List<MatchingEntity> matchingEntities = matchingRepository.findFailedMatchings();
+
+        return matchingDtoListFrom(matchingEntities);
+
+    }
+
+
+    // Entity 목록 → DTO 목록 변환
+    private List<MatchingDto> matchingDtoListFrom(
+            List<MatchingEntity> matchingEntities
+    ) {
+
+        List<MatchingDto> matchingDtos = new ArrayList<>();
+
+        for (MatchingEntity matchingEntity : matchingEntities) {
+            MatchingDto matchingDto = matchingDtoFrom(matchingEntity);
+            matchingDtos.add(matchingDto);
+
+        }
+
+        return matchingDtos;
+
+    }
+
     // [6] 회원별 매칭 조회
 
     public List<MatchingDto> matchingMemberRead(String memberId) {
