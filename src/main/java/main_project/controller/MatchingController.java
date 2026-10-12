@@ -59,6 +59,58 @@ public class MatchingController {
 
     }
 
+        //  자동 매칭 연결 목록 조회 (관리자)
+    @GetMapping("/recommended")
+    public List<MatchingDto> matchingRecommendedRead(
+            @CookieValue(value = "AccessToken", required = false) String accessToken) {
+
+        // 관리자 권한 확인
+        if (!adminCheck(accessToken)) {
+            return new ArrayList<>();
+        }
+
+        // 추천 생성 후 화주가 아직 요청하지 않은 목록
+        return matchingService.matchingRecommendedRead();
+
+    }
+
+
+    // 화주사만 승인한 목록 조회 (관리자)
+    @GetMapping("/shipper-requested")
+    public List<MatchingDto> matchingShipperRequestedRead(@CookieValue(value = "AccessToken", required = false)String accessToken) {
+        if (!adminCheck(accessToken)) {
+            return new ArrayList<>();
+        }
+
+        // 화주 요청 후 운송사 수락을 기다리는 목록
+        return matchingService.matchingShipperRequestedRead();
+
+    }
+
+
+    // 최종 매칭 성사 목록 조회 (관리자)
+    @GetMapping("/completed")
+    public List<MatchingDto> matchingCompletedRead(@CookieValue(value = "AccessToken", required = false)String accessToken) {
+        if (!adminCheck(accessToken)) {
+            return new ArrayList<>();
+        }
+
+        return matchingService.matchingCompletedRead();
+
+    }
+
+
+    //  최종 매칭 실패 목록 조회 (관리자)
+    @GetMapping("/failed")
+    public List<MatchingDto> matchingFailedRead(@CookieValue(value = "AccessToken", required = false)String accessToken) {
+        if (!adminCheck(accessToken)) {
+            return new ArrayList<>();
+        }
+
+        return matchingService.matchingFailedRead();
+
+    }
+
 
     // [2] 회원별 매칭 결과 조회
     @GetMapping("/member/{memberId}")

@@ -67,4 +67,37 @@ public interface MatchingRepository extends JpaRepository<MatchingEntity, Intege
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<MatchingEntity> findByMatchingId(Integer matchingId);
 
+     // [8] 자동 매칭 연결 목록 조회 
+    // 추천이 생성됐지만 화주가 아직 요청하지 않은 상태
+    @Query( "SELECT m FROM MatchingEntity m " +
+            "WHERE m.shipperStatus = 'WAITING' " +
+            "AND m.logisticsStatus = 'WAITING' " +
+            "AND m.finalStatus = 'PENDING' " +
+            "ORDER BY m.createdAt DESC, m.matchingId DESC")
+    List<MatchingEntity> findRecommendedMatchings();
+
+
+    // [9] 화주사만 승인한 목록 조회 
+    // 화주는 요청했고 물류기업은 아직 응답하지 않은 상태
+    @Query( "SELECT m FROM MatchingEntity m " +
+            "WHERE m.shipperStatus = 'ACCEPTED' " +
+            "AND m.logisticsStatus = 'WAITING' " +
+            "AND m.finalStatus = 'PENDING' " +
+            "ORDER BY m.createdAt DESC, m.matchingId DESC")
+    List<MatchingEntity> findShipperRequestedMatchings();
+
+
+    // [10] 최종 매칭 성사 목록 조회 
+    @Query( "SELECT m FROM MatchingEntity m " +
+            "WHERE m.finalStatus = 'COMPLETED' " +
+            "ORDER BY m.createdAt DESC, m.matchingId DESC")
+    List<MatchingEntity> findCompletedMatchings();
+
+
+    // [11] 최종 매칭 실패 목록 조회 
+    @Query( "SELECT m FROM MatchingEntity m " +
+            "WHERE m.finalStatus = 'FAILED' " +
+            "ORDER BY m.createdAt DESC, m.matchingId DESC")
+    List<MatchingEntity> findFailedMatchings();
+
 }
