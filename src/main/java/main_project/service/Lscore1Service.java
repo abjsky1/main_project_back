@@ -96,13 +96,22 @@ public class Lscore1Service {
 
             // 화주가 먼저 조건을 등록했어도 신규 물류기업 등록 시 추천 후보를 다시 찾음
             if (savedLscore1.getMatchingAgree() != null && savedLscore1.getMatchingAgree() == true) {
-                for (Cscore1Entity c : cscore1Repository.findByMatchingAgreeTrue()) {
-                    // 활성 상태의 화주만 자동 매칭 재검사
-                    if (c.getMemberEntity().getStatus() != null
-                            && c.getMemberEntity().getStatus() == true) {
-                        matchingService.matchingWrite(c.getCscore1Id());
+                
+                // 모든 화주 검사 대신, 방금 등록한 물류기업과 노선이 맞는 화주만 조회
+                for(Cscore1Entity cscore1Entity : cscore1Repository.findMatchingCandidatesForLogistics(
+                    savedLscore1.getCountryId(),
+                    savedLscore1.getTradeType(),
+                    savedLscore1.getTransportType(),
+                    savedLscore1.getDeparture(),
+                    savedLscore1.getArrival())) {
+
+                        // 활성 상태의 화주만 자동 매칭 재검사
+                        if (cscore1Entity.getMemberEntity().getStatus() != null
+                            && cscore1Entity.getMemberEntity().getStatus() == true) {
+                            
+                                matchingService.matchingWrite(cscore1Entity.getCscore1Id(), savedLscore1.getLscore1Id());
+                        }
                     }
-                }
             }
             return true;
 
