@@ -999,15 +999,40 @@ public class MatchingService {
 
         }
 
-        // [수정] 7. 화주가 물류기업에 매칭 요청
-
+        
+        // 7. 선택한 운송사에 매칭 요청
         matchingEntity.setShipperStatus("ACCEPTED");
 
-        // 물류기업이 아직 수락하지 않았으므로 PENDING 유지
-
+        // 물류기업 응답 전까지 PENDING 유지
         matchingRepository.save(matchingEntity);
 
+        // 8. 같은 화물 조건의 모든 추천 조회
+        // cscore1Id는 위에서 이미 선언되어 있음
+        List<MatchingEntity> otherMatchings =
+                matchingRepository.findByCscore1EntityCscore1Id(cscore1Id);
+
+        // 9. 선택하지 않은 나머지 운송사 자동 거절
+        for (MatchingEntity other : otherMatchings) {
+
+            // 선택한 운송사 제외
+            if (other.getMatchingId().equals(matchingId)) {
+                continue;
+            }
+
+            // 아직 검토 대기 중인 추천만 자동 거절
+            if ("PENDING".equals(other.getFinalStatus())
+                    && "WAITING".equals(other.getShipperStatus())
+                    && "WAITING".equals(other.getLogisticsStatus())) {
+
+                other.setShipperStatus("REJECTED");
+                other.setFinalStatus("FAILED");
+
+                matchingRepository.save(other);
+            }
+        }
+
         return true;
+
 
     }
 
