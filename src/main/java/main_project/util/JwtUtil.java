@@ -38,7 +38,7 @@ public class JwtUtil {
                     .claim("type", "ACCESS")
                     .subject(memberId)
                     .issuedAt(new Date())
-                    .expiration(new Date(new Date().getTime() + 1000L * 60 * 30))
+                    .expiration(new Date(new Date().getTime() + 1000L * 60 * 20))
                     .signWith(secretKey)
                     .compact();
                     return jwt;
@@ -56,17 +56,26 @@ public class JwtUtil {
                         return refreshToken;
                             }
 
-    // [2]  JWT 토큰 검증 메소드
-    public String getMemberIdFromToken( String token ) {
+    // [3]  JWT 토큰 검증 메소드
+    public String getMemberIdFromToken( String token ) { return getMemberIdByType(token , "ACCESS");}
 
+
+    // [4]  JWT 토큰 검증 메소드
+    public String getMemberIdFromRefreshToken( String token ) { return getMemberIdByType(token , "REFRESH");}
+
+    private String getMemberIdByType( String token, String expectedType) {
+        if (token == null || token.isBlank()) { return null;}
         try{ Claims claims = Jwts.parser()
                             .verifyWith(secretKey)
                             .build()
                             .parseSignedClaims(token)
                             .getPayload();
-        return claims.getSubject();
-        } catch (Exception e) {
-            return null;
-        }
+        // AccessToken인지 RefreshToken인지 확인
+         String type = claims.get("type" , String.class);
+         if (!expectedType.equals(type)) { return null; }
+         String memberId = claims.getSubject();
+         if ( memberId == null || memberId.isBlank()) {return null;}
+         return memberId;
+        } catch (Exception e) { return null;}
     }
 }
