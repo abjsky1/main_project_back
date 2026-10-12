@@ -602,7 +602,17 @@ public class MatchingService {
 
     @Transactional
 
+    // 기존 화주 등록 시 호출
     public boolean matchingWrite(Integer cscore1Id) {
+
+        // 기존처럼 모든 물류기업을 검사
+        return matchingWrite(cscore1Id, null);
+
+    }
+
+    public boolean matchingWrite(
+        Integer cscore1Id,
+        Integer onlyLscore1Id)  {
 
         // [수정] 1. 화주 기본 조건 조회 및 잠금
 
@@ -658,9 +668,32 @@ public class MatchingService {
 
         }
 
-        // [수정] 6. 매칭에 동의한 물류업체 조건만 조회
+        
+        // [수정] 6. 물류기업 조회 범위 결정
+        List<Lscore1Entity> lscore1Entities;
 
-        List<Lscore1Entity> lscore1Entities = lscore1Repository.findByMatchingAgreeTrue();
+        if (onlyLscore1Id == null) {
+
+            // 화주 조건 등록 시:
+            // 기존처럼 매칭에 동의한 모든 물류기업 검사
+            lscore1Entities =
+                    lscore1Repository.findByMatchingAgreeTrue();
+
+        } else {
+
+            // 물류기업 조건 등록 시:
+            // 방금 등록한 물류기업 한 곳만 검사
+            lscore1Entities = new ArrayList<>();
+
+            Lscore1Entity target =
+                    lscore1Repository.findById(onlyLscore1Id)
+                            .orElse(null);
+
+            if (target != null) {
+                lscore1Entities.add(target);
+            }
+        }
+
 
         // 조건을 통과한 업체가 있는지 확인할 변수
 
@@ -1246,183 +1279,125 @@ public class MatchingService {
     }
 
     // [12] MatchingEntity -> MatchingDto 변환
-
     // 기존 matchingRead(), matchingMemberRead()에서
-
     // 중복 작성했던 DTO 변환 코드를 하나로 정리
-
     private MatchingDto matchingDtoFrom(MatchingEntity matchingEntity) {
+
+        // [추가] 매칭된 물류기업의 기본 운송 조건
+        Lscore1Entity logisticsCondition = matchingEntity.getLscore1Entity();
+
+        // [추가] 매칭된 물류기업의 운송 일정 정보
+        Lscore2Entity logisticsSchedule = lscore2Repository
+                    .findByLscore1Entity(logisticsCondition)
+                    .orElse(null);
 
         MatchingDto matchingDto = MatchingDto.builder()
 
                 // 매칭 PK
-
                 .matchingId(matchingEntity.getMatchingId())
 
                 // 화주 매칭 조건 PK
-
-                .cscore1Id(matchingEntity.getCscore1Entity().getCscore1Id())
+                .cscore1Id(
+                        matchingEntity.getCscore1Entity().getCscore1Id()
+                )
 
                 // 물류기업 매칭 조건 PK
-
-                .lscore1Id(matchingEntity.getLscore1Entity().getLscore1Id())
+                .lscore1Id(
+                        matchingEntity.getLscore1Entity().getLscore1Id()
+                )
 
                 // 수출입기업 정보
-
                 .shipperCompanyName(
-
-                        matchingEntity
-
-                                .getCscore1Entity()
-
-                                .getMemberEntity()
-
-                                .getCompanyName()
-
+                        matchingEntity.getCscore1Entity()
+                                .getMemberEntity().getCompanyName()
                 )
-
                 .shipperContactName(
-
-                        matchingEntity
-
-                                .getCscore1Entity()
-
-                                .getMemberEntity()
-
-                                .getManagerName()
-
+                        matchingEntity.getCscore1Entity()
+                                .getMemberEntity().getManagerName()
                 )
-
                 .shipperBizNumber(
-
-                        matchingEntity
-
-                                .getCscore1Entity()
-
-                                .getMemberEntity()
-
-                                .getBusinessRegNo()
-
+                        matchingEntity.getCscore1Entity()
+                                .getMemberEntity().getBusinessRegNo()
                 )
-
                 .shipperPhone(
-
-                        matchingEntity
-
-                                .getCscore1Entity()
-
-                                .getMemberEntity()
-
-                                .getUserPhone()
-
+                        matchingEntity.getCscore1Entity()
+                                .getMemberEntity().getUserPhone()
                 )
-
                 .shipperAddress(
-
-                        matchingEntity
-
-                                .getCscore1Entity()
-
-                                .getMemberEntity()
-
-                                .getCompanyAddress()
-
+                        matchingEntity.getCscore1Entity()
+                                .getMemberEntity().getCompanyAddress()
                 )
 
                 // 물류기업 정보
-
                 .logisticsCompanyName(
-
-                        matchingEntity
-
-                                .getLscore1Entity()
-
-                                .getMemberEntity()
-
-                                .getCompanyName()
-
+                        matchingEntity.getLscore1Entity()
+                                .getMemberEntity().getCompanyName()
                 )
-
                 .logisticsContactName(
-
-                        matchingEntity
-
-                                .getLscore1Entity()
-
-                                .getMemberEntity()
-
-                                .getManagerName()
-
+                        matchingEntity.getLscore1Entity()
+                                .getMemberEntity().getManagerName()
                 )
-
                 .logisticsBizNumber(
-
-                        matchingEntity
-
-                                .getLscore1Entity()
-
-                                .getMemberEntity()
-
-                                .getBusinessRegNo()
-
+                        matchingEntity.getLscore1Entity()
+                                .getMemberEntity().getBusinessRegNo()
                 )
-
                 .logisticsPhone(
-
-                        matchingEntity
-
-                                .getLscore1Entity()
-
-                                .getMemberEntity()
-
-                                .getUserPhone()
-
+                        matchingEntity.getLscore1Entity()
+                                .getMemberEntity().getUserPhone()
                 )
-
                 .logisticsAddress(
-
-                        matchingEntity
-
-                                .getLscore1Entity()
-
-                                .getMemberEntity()
-
-                                .getCompanyAddress()
-
+                        matchingEntity.getLscore1Entity()
+                                .getMemberEntity().getCompanyAddress()
                 )
 
-                // 점수
+                // [추가] 운송 서비스 정보
 
+                // 운송 방식 (true = 해상, false = 항공)
+                .logisticsTransportType(
+                        logisticsCondition.getTransportType()
+                )
+
+                // 정기노선 여부
+                .logisticsRegularRoute(
+                        logisticsCondition.getRegularRoute()
+                )
+
+                // 직항 여부
+                .logisticsDirectRoute(
+                        logisticsCondition.getDirectRoute()
+                )
+
+                // HS코드 취급 경험
+                .logisticsExperienceCount(
+                        logisticsCondition.getExperienceCount()
+                )
+
+                // 평균 운송 기간
+                .logisticsAverageTransitDays(
+                        logisticsSchedule != null
+                                ? logisticsSchedule.getAverageTransitDays()
+                                : null
+                )
+
+                // 매칭 점수
                 .routeScore(matchingEntity.getRouteScore())
-
                 .capacityScore(matchingEntity.getCapacityScore())
-
                 .itemScore(matchingEntity.getItemScore())
-
                 .scheduleScore(matchingEntity.getScheduleScore())
-
                 .experienceScore(matchingEntity.getExperienceScore())
-
                 .totalScore(matchingEntity.getTotalScore())
 
-                // 상태
-
+                // 매칭 상태
                 .adminStatus(matchingEntity.getAdminStatus())
-
                 .shipperStatus(matchingEntity.getShipperStatus())
-
                 .logisticsStatus(matchingEntity.getLogisticsStatus())
-
                 .finalStatus(matchingEntity.getFinalStatus())
 
-                // 추천 이유 / 경고 메시지
-
+                // 추천 이유 및 경고 메시지
                 .recommendReason(matchingEntity.getRecommendReason())
-
                 .warningMessage(matchingEntity.getWarningMessage())
 
                 // 매칭 생성일
-
                 .createdAt(matchingEntity.getCreatedAt())
 
                 .build();
