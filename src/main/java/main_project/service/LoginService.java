@@ -46,7 +46,7 @@ public class LoginService {
     // 1. 회원 ID로 조회
     MemberEntity memberEntity = memberRepository.findById(memberId).orElse(null);
 
-    // 2. 없는 회원이면 재발급 불가
+    // 2. 해당 회원 ID의 회원이 DB에 없으면 조회 실패
     if (memberEntity == null) {return null;}
 
     // 3. 비활성 회원이면 재발급 불가

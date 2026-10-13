@@ -40,13 +40,13 @@ public class LoginController {
         if (result == null) {return false;}
 
         try{
-        // 3. 로그인 성공시 memberId를 이용해서 JWT Access token 생성
+        // 3. 로그인 성공시 memberId를 이용해서 JWT에 Access token 생성 요청 
         String accessToken = jwtUtil.createAccessToken(result.getMemberId());
         String refreshToken = jwtUtil.createRefreshToken(result.getMemberId());
 
     
 
-           // 4. Access Token을 쿠키에 저장
+        // 4. Access Token을 쿠키에 저장
         ResponseCookie accesscookie = ResponseCookie
                                 .from("AccessToken", accessToken)
                                 .path("/")
@@ -79,16 +79,16 @@ public class LoginController {
         return true; } catch ( Exception e ) { e.printStackTrace(); return false;}
     }
 
-    // 현재 로그인한 회원 정보 조회
-    @GetMapping("/me")
-    public MemberDto getMyInfo(@CookieValue(value = "AccessToken", required = false)String accessToken) {
-        // 1. AccessToken 검증 후 회원 ID 확인
-        String memberId = jwtUtil.getMemberIdFromToken(accessToken);
-        // 2. 토큰이 없거나 검증에 실패하면 조회 중단
-        if (memberId == null) {return null;}
-        // 3. 서비스에서 회원 조회·활성 상태 확인 후 DTO 반환
-        return loginService.getMyInfo(memberId);
-    }
+        // 현재 로그인한 회원 정보 조회 // 
+        @GetMapping("/me")
+        public MemberDto getMyInfo(@CookieValue(value = "AccessToken", required = false)String accessToken) {
+            // 1. AccessToken 검증 후 회원 ID 확인
+            String memberId = jwtUtil.getMemberIdFromToken(accessToken);
+            // 2. 토큰이 없거나 검증에 실패하면 조회 중단
+            if (memberId == null) {return null;}
+            // 3. 서비스에서 회원 조회·활성 상태 확인 후 DTO 반환
+            return loginService.getMyInfo(memberId);
+        }
 
     // [2] 로그아웃
     @PostMapping ("/logout")
