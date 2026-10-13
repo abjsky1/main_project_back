@@ -66,10 +66,6 @@ public class ChatService {
 //  메시지 내용 최대 글자 수 (MessageEntity 의 content 칸 길이와 같게 — AuditService 의 DETAIL_MAX_LENGTH 와 같은 방식)
     private static final int CONTENT_MAX_LENGTH = 1000;
 
-//  관리자 권한 번호 (role 테이블 : 1 = ROLE_USER , 2 = ROLE_ADMIN — MypageService 와 같은 방식)
-//  ⑦ 메시지 보내기에서 "지금도 관리자인지" 를 DB 값으로 다시 확인할 때 사용
-    private static final int ROLE_ADMIN_ID = 2;
-
 //  ---------- 웹소켓 구독 주소 (WebSocketConfig 의 구독 주소 /sub 아래) ----------
 //  보내는 곳(⑨ sendAfterCommit)과 구독 검사(⑩ canSubscribe)가 같은 글자를 써야 해서 한 곳에 둠
     private static final String ADMIN_TOPIC = "/sub/chat/admin";          // 관리자 화면 (모든 방의 메시지)
@@ -451,8 +447,8 @@ public class ChatService {
         MemberEntity senderEntity = memberRepository.findById(memberId).orElse(null);
         if (senderEntity == null || senderEntity.getStatus() == false) { return null; }
 
-    //  4. 관리자인지 지금 DB 값으로 확인 (role 2 = 관리자)
-        boolean isAdmin = senderEntity.getRoleEntity().getRoleId() == ROLE_ADMIN_ID;
+    //  4. 관리자인지 지금 DB 값으로 확인 (MemberEntity.isAdmin( ) — role 2 = 관리자)
+        boolean isAdmin = senderEntity.isAdmin();
 
     //  5. 방 찾기 (없으면 null)
     //     SELECT * FROM room WHERE room_id = ?
@@ -606,8 +602,8 @@ public class ChatService {
         MemberEntity memberEntity = memberRepository.findById(memberId).orElse(null);
         if (memberEntity == null || memberEntity.getStatus() == false) { return false; }
 
-    //  3. 관리자인지 지금 DB 값으로 확인 (role 2 = 관리자)
-        boolean isAdmin = memberEntity.getRoleEntity().getRoleId() == ROLE_ADMIN_ID;
+    //  3. 관리자인지 지금 DB 값으로 확인 (MemberEntity.isAdmin( ) — role 2 = 관리자)
+        boolean isAdmin = memberEntity.isAdmin();
 
     //  4. 관리자 주소 : 관리자만
         if (destination.equals(ADMIN_TOPIC)) { return isAdmin; }

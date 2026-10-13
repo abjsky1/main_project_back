@@ -99,4 +99,15 @@ public class MemberEntity extends BaseTime {
     @EqualsAndHashCode.Exclude
     @Builder.Default
     private List<InterestEntity> interestEntities = new ArrayList<>();
+
+
+//  ---------- 이 회원이 관리자인지 (role 2 = 관리자) ----------
+//  - "관리자 = role 2" 규칙을 여기 한 곳에만 둠 → 권한 확인 · 마이페이지 · 감사 로그 · 채팅이 모두 이 메소드를 씀
+//    예) if (memberEntity.isAdmin()) { ... }
+//  - true / false 를 돌려주는 메소드라 이름을 isXxx 로 (Java 관례 — Lombok 이 boolean 칸에 만드는 getter 와 같은 모양)
+//  - roleEntity 는 LAZY 지만 getRoleId( ) 처럼 번호만 읽으면 role 테이블을 추가로 조회하지 않음
+//  - DB 칸이 아니라 메소드라서 테이블에는 아무것도 생기지 않음
+    public boolean isAdmin(){
+        return roleEntity.getRoleId() == RoleEntity.ADMIN_ROLE_ID;
+    }
 }

@@ -17,9 +17,6 @@ import main_project.util.JwtUtil;
 @Transactional
 public class MypageService {
 
-//  role 테이블 번호 (MainDBSampleData.sql : 2 = ROLE_ADMIN)
-    private static final int ROLE_ADMIN_ID = 2;
-
     private final MemberRepository memberRepository;
 
     private final AuditRepository auditRepository;
@@ -150,7 +147,7 @@ public class MypageService {
         if (memberEntity == null) { return false; }
 
         // 4. 관리자는 탈퇴 불가 (관리자 계정이 사라지면 시스템 관리를 할 사람이 없어짐)
-        if (memberEntity.getRoleEntity().getRoleId() == ROLE_ADMIN_ID) { return false; }
+        if (memberEntity.isAdmin()) { return false; }
 
         // 5. 비밀번호 확인 (LoginService 의 로그인 검증과 같은 방법)
         //    passwordEncoder.matches( 입력한 비밀번호(평문) , DB 에 저장된 비밀번호(암호문) )
