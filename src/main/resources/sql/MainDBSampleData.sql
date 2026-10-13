@@ -256,6 +256,13 @@ INSERT INTO member (member_id, signup_id, user_email, user_password, company_nam
 ('522634a0-3d7b-43ed-8a56-1ce716f3ada8', 301, 'jeil@logis.com', '$2y$10$wH/iPUP5zlWLy95EUz/oCOxDqstAm3XjIw0.QIAJNIg9sQzun11EW', '제일물류', '이제일', '130-81-40199', '02-999-8888', '서울특별시 영등포구 국회대로', NOW(), NOW(), 1, TRUE),
 ('db2b9d4b-4225-4b77-8a49-652752176d44', 301, 'dongyang@logis.com', '$2y$10$wH/iPUP5zlWLy95EUz/oCOxDqstAm3XjIw0.QIAJNIg9sQzun11EW', '동양물류', '박동양', '130-81-40200', '02-111-9999', '서울특별시 마포구 도화동', NOW(), NOW(), 1, TRUE),
 ('ce3d3857-a1f1-4544-918e-58944d2c003f', 101, 'admin@naver.com', '$2y$10$ZRdR2V/fDJU70JhwVDcpV.vN6iyzeaBRuuX.fDvoGFUoQOoL2kGZO', '관리자', '김길리', '123-45-67890', '02-123-4567', '서울특별시 동해물과 백두산이', NOW(), NOW(), 2, TRUE),
+-- 시연용 관리자(상담원) 5명 : 고객센터 채팅에서 상담원마다 이름이 다르게 기록되는 것(message.sender_name)을 보여 주려고 추가
+-- 비밀번호는 위 admin@naver.com 과 같은 값 , 이메일 · 사업자번호는 UNIQUE 라서 계정마다 다르게
+('c4c9a876-73f2-4bdb-8da2-feb5da2e02a5', 101, 'admin2@naver.com', '$2y$10$ZRdR2V/fDJU70JhwVDcpV.vN6iyzeaBRuuX.fDvoGFUoQOoL2kGZO', '관리자', '이수진', '123-45-67891', '02-123-4568', '서울특별시 동해물과 백두산이', NOW(), NOW(), 2, TRUE),
+('f1dd1c03-0973-4c10-9b5e-4f505a6ba8fe', 101, 'admin3@naver.com', '$2y$10$ZRdR2V/fDJU70JhwVDcpV.vN6iyzeaBRuuX.fDvoGFUoQOoL2kGZO', '관리자', '박민호', '123-45-67892', '02-123-4569', '서울특별시 동해물과 백두산이', NOW(), NOW(), 2, TRUE),
+('84454881-bdb4-48ea-a2ce-afcacc55b9d4', 101, 'admin4@naver.com', '$2y$10$ZRdR2V/fDJU70JhwVDcpV.vN6iyzeaBRuuX.fDvoGFUoQOoL2kGZO', '관리자', '최유나', '123-45-67893', '02-123-4570', '서울특별시 동해물과 백두산이', NOW(), NOW(), 2, TRUE),
+('6824d990-78f0-4b36-98e0-99bec42819a4', 101, 'admin5@naver.com', '$2y$10$ZRdR2V/fDJU70JhwVDcpV.vN6iyzeaBRuuX.fDvoGFUoQOoL2kGZO', '관리자', '정태윤', '123-45-67894', '02-123-4571', '서울특별시 동해물과 백두산이', NOW(), NOW(), 2, TRUE),
+('c18f6846-7d44-4232-924d-e35fd4a3a3fe', 101, 'admin6@naver.com', '$2y$10$ZRdR2V/fDJU70JhwVDcpV.vN6iyzeaBRuuX.fDvoGFUoQOoL2kGZO', '관리자', '한지우', '123-45-67895', '02-123-4572', '서울특별시 동해물과 백두산이', NOW(), NOW(), 2, TRUE),
 -- 비회원 공통 계정 (로그인 안 한 손님 , 미가입 이메일 로그인 시도 등의 감사 로그를 연결)
 -- password '-' 는 BCrypt 값이 아니고 status FALSE 라서 로그인 불가 , 사용자 권한 관리 목록에서는 제외 (MemberRepository.searchWithRole)
 ('GUEST', 401, 'guest@macross.local', '-', '비회원', '비회원', 'GUEST', '-', '-', NOW(), NOW(), 1, FALSE),
