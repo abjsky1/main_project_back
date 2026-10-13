@@ -2,6 +2,7 @@ package main_project.controller;
 
 import java.util.List;
 
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,6 +16,7 @@ import main_project.service.TradestatusService;
 @RestController
 @RequestMapping("/api/cumulative")
 @RequiredArgsConstructor
+@CrossOrigin("*")
 public class TradestatusController {
 
     private final TradestatusService tradestatusService;

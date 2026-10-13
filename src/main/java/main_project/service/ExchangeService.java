@@ -45,11 +45,7 @@ public class ExchangeService {
                 sum = sum.add(rate);
             }
 
-            BigDecimal average = sum.divide(
-                    BigDecimal.valueOf(rates.size()),
-                    3,
-                    RoundingMode.HALF_UP
-            );
+            BigDecimal average = sum.divide(BigDecimal.valueOf(rates.size()),1,RoundingMode.HALF_UP);
 
             String[] parts = key.split("/", 2);
             String currency = parts[1];
