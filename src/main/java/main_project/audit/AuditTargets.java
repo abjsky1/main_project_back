@@ -75,6 +75,7 @@ public class AuditTargets {
         add("GET", "/api/cscore",                     "데이터 조회", "화주 매칭 조건 목록 조회");
         add("GET", "/api/lscore",                     "데이터 조회", "물류 매칭 조건 목록 조회");
         add("GET", "/api/matching",                   "데이터 조회", "매칭 결과 목록 조회");
+        add("GET", "/api/matching/admin",             "데이터 조회", "매칭 관리 목록 조회");
         add("GET", "/api/matching/member/{memberId}", "데이터 조회", "내 매칭 알림 조회");
         add("GET", "/api/cumulative/trade",           "데이터 조회", "누적 무역 현황 조회");
         add("GET", "/api/exchangerate/nation",        "데이터 조회", "국가별 환율 조회");

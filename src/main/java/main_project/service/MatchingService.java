@@ -4,6 +4,10 @@ import java.util.ArrayList;
 
 import java.util.List;
 
+import org.springframework.data.domain.PageRequest;
+
+import org.springframework.data.domain.Pageable;
+
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
@@ -11,6 +15,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import main_project.model.dto.MatchingDto;
+
+import main_project.model.dto.MatchingPageDto;
 
 import main_project.model.entity.Cscore1Entity;
 
@@ -61,6 +67,9 @@ public class MatchingService {
     private final Lscore2Repository lscore2Repository;
 
     private final Lscore3Repository lscore3Repository;
+
+    // 관리자 매칭 관리 화면 한 페이지에 보여 줄 건수 ([5-1] matchingAdminRead — 감사 로그와 같은 50건)
+    private static final int ADMIN_PAGE_SIZE = 50;
 
     // [1] 수출입기업(화주)과 물류기업 1차 매칭 조건 확인
 
@@ -878,60 +887,62 @@ public class MatchingService {
 
     }
 
-    // 자동 매칭 연결 목록 조회 (관리자)
-    public List<MatchingDto> matchingRecommendedRead() {
+    // [5-1] 관리자 매칭 관리 화면 — 상태별 건수 5개 + 고른 상태의 매칭 한 페이지(50건)를 한 번에
+    //  - status : all(전체) / linked(자동 매칭 연결) / requested(물류 수락 대기) / completed(성사) / failed(실패)
+    //  - page   : 몇 번째 페이지 (0 부터 — 0 = 1페이지)
+    //  - DB 조회 : 건수 쿼리 1번 + 목록 쿼리 1번 (+ 운송 기간을 위한 lscore2 조회가 매칭 1건마다 1번 — matchingDtoFrom)
+    //  (예전에 상태마다 따로 있던 목록 조회 4개를 이 메소드 하나로 합침 — 감사 로그 페이징과 같은 방식)
+    public MatchingPageDto matchingAdminRead(String status, int page) {
 
-        List<MatchingEntity> matchingEntities = matchingRepository.findRecommendedMatchings();
-
-        return matchingDtoListFrom(matchingEntities);
-
-    }
-
-
-    //  화주사만 승인한 목록 조회 (관리자)
-    public List<MatchingDto> matchingShipperRequestedRead() {
-
-        List<MatchingEntity> matchingEntities = matchingRepository.findShipperRequestedMatchings();
-
-        return matchingDtoListFrom(matchingEntities);
-
-    }
-
-
-    //  최종 매칭 성사 목록 조회 (관리자)
-    public List<MatchingDto> matchingCompletedRead() {
-
-        List<MatchingEntity> matchingEntities = matchingRepository.findCompletedMatchings();
-
-        return matchingDtoListFrom(matchingEntities);
-
-    }
-
-
-    // 최종 매칭 실패 목록 조회 (관리자)
-    public List<MatchingDto> matchingFailedRead() {
-
-        List<MatchingEntity> matchingEntities = matchingRepository.findFailedMatchings();
-
-        return matchingDtoListFrom(matchingEntities);
-
-    }
-
-
-    // Entity 목록 → DTO 목록 변환
-    private List<MatchingDto> matchingDtoListFrom(
-            List<MatchingEntity> matchingEntities
-    ) {
-
-        List<MatchingDto> matchingDtos = new ArrayList<>();
-
-        for (MatchingEntity matchingEntity : matchingEntities) {
-            MatchingDto matchingDto = matchingDtoFrom(matchingEntity);
-            matchingDtos.add(matchingDto);
-
+        // 1. 상태 정리 : 정해진 5가지가 아니면(null , 오타 등) 전체로
+        //    List.of( ... ).contains( 값 ) : 목록 안에 그 값이 있는지 (null 이어도 오류 없이 false)
+        if (!List.of("all", "linked", "requested", "completed", "failed").contains(status)) {
+            status = "all";
         }
 
-        return matchingDtos;
+        // 2. 페이지 번호 정리 : 0 보다 작으면 0
+        if (page < 0) {
+            page = 0;
+        }
+
+        // 3. 상태별 건수 5개 (카드 숫자) — 쿼리 1번 (MatchingRepository [8])
+        MatchingRepository.StatusCount statusCount = matchingRepository.findStatusCount();
+
+        // 4. 고른 상태의 전체 건수 → 전체 페이지 수 계산
+        //    3번에서 이미 셌으니 목록 쪽에서 COUNT 쿼리를 다시 보내지 않음
+        long totalCount = statusCount.getAllCount();
+        if ("linked".equals(status))    { totalCount = statusCount.getLinkedCount(); }
+        if ("requested".equals(status)) { totalCount = statusCount.getRequestedCount(); }
+        if ("completed".equals(status)) { totalCount = statusCount.getCompletedCount(); }
+        if ("failed".equals(status))    { totalCount = statusCount.getFailedCount(); }
+
+        //    전체 페이지 수 = 건수 ÷ 50 을 올림 (예: 120건 → 2.4 → 3페이지 , 0건 → 0페이지)
+        //    Math.ceil : 소수점 올림 , (double) : 나눗셈을 소수점까지 계산하려고 (정수 ÷ 정수는 소수점이 버려짐)
+        int totalPages = (int) Math.ceil(totalCount / (double) ADMIN_PAGE_SIZE);
+
+        // 5. 고른 상태의 매칭 중 이번 페이지만 조회 — 쿼리 1번 (MatchingRepository [9])
+        //    PageRequest.of( 페이지 번호 , 한 페이지 건수 ) : "page 번째 페이지를 50건씩" (감사 로그 페이징과 같음)
+        Pageable pageable = PageRequest.of(page, ADMIN_PAGE_SIZE);
+        List<MatchingEntity> matchingEntities = matchingRepository.findAdminPage(status, pageable);
+
+        // 6. 엔티티 → DTO (회원별 조회 · 전체 조회와 같은 변환 [12] matchingDtoFrom 사용)
+        List<MatchingDto> matchings = matchingEntities.stream().map((matchingEntity) -> {
+            return matchingDtoFrom(matchingEntity);
+        }).toList();
+
+        // 7. 건수 5개 + 목록 + 페이지 숫자 → 응답 DTO 하나로
+        return MatchingPageDto.builder()
+                .allCount(statusCount.getAllCount())
+                .linkedCount(statusCount.getLinkedCount())
+                .requestedCount(statusCount.getRequestedCount())
+                .completedCount(statusCount.getCompletedCount())
+                .failedCount(statusCount.getFailedCount())
+                .matchings(matchings)
+                .page(page)
+                .size(ADMIN_PAGE_SIZE)
+                .totalPages(totalPages)
+                .totalCount(totalCount)
+                .build();
 
     }
 

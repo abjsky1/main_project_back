@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.CookieValue;
 import lombok.RequiredArgsConstructor;
 
 import main_project.model.dto.MatchingDto;
+import main_project.model.dto.MatchingPageDto;
 import main_project.model.entity.MatchingEntity;
 import main_project.model.repository.MatchingRepository;
 import main_project.service.MatchingService;
@@ -63,47 +64,24 @@ public class MatchingController {
 
     }
 
-    // 자동 매칭 연결 목록 조회 (관리자)
-    @GetMapping("/recommended")
-    public List<MatchingDto> matchingRecommendedRead(
+    // [1-1] 관리자 매칭 관리 화면 — 상태별 건수 5개 + 고른 상태의 매칭 한 페이지(50건)를 한 번에
+    //  예) GET /api/matching/admin?status=completed&page=0
+    //  - status : all(전체) / linked(자동 매칭 연결) / requested(물류 수락 대기) / completed(성사) / failed(실패) , 안 보내면 all
+    //  - page   : 몇 번째 페이지 (0 부터 — 0 = 1페이지) , 안 보내면 0
+    //             defaultValue : 값이 안 오면 쓸 기본값 (springweb day039 RestController2 와 같은 방식)
+    //  - 관리자가 아니면 null (화면은 "관리자만 볼 수 있습니다")
+    //  (예전에 상태마다 따로 있던 /recommended , /shipper-requested , /completed , /failed 4개를 이 주소 하나로 합침)
+    @GetMapping("/admin")
+    public MatchingPageDto matchingAdminRead(
+            @RequestParam(name = "status", required = false, defaultValue = "all") String status,
+            @RequestParam(name = "page", required = false, defaultValue = "0") int page,
             @CookieValue(value = "AccessToken", required = false) String accessToken) {
 
-        // 관리자 권한 확인
-        if (!adminCheck(accessToken)) {return new ArrayList<>();}
+        // 1. 관리자 권한 확인 (아니면 null)
+        if (!adminCheck(accessToken)) {return null;}
 
-        // 추천 생성 후 화주가 아직 요청하지 않은 목록
-        return matchingService.matchingRecommendedRead();
-
-    }
-
-
-    // 화주사만 승인한 목록 조회 (관리자)
-    @GetMapping("/shipper-requested")
-    public List<MatchingDto> matchingShipperRequestedRead(@CookieValue(value = "AccessToken", required = false)String accessToken) {
-        if (!adminCheck(accessToken)) {return new ArrayList<>();}
-
-        // 화주 요청 후 운송사 수락을 기다리는 목록
-        return matchingService.matchingShipperRequestedRead();
-
-    }
-
-
-    // 최종 매칭 성사 목록 조회 (관리자)
-    @GetMapping("/completed")
-    public List<MatchingDto> matchingCompletedRead(@CookieValue(value = "AccessToken", required = false)String accessToken) {
-        if (!adminCheck(accessToken)) {return new ArrayList<>();}
-
-        return matchingService.matchingCompletedRead();
-
-    }
-
-
-    // 최종 매칭 실패 목록 조회 (관리자)
-    @GetMapping("/failed")
-    public List<MatchingDto> matchingFailedRead(@CookieValue(value = "AccessToken", required = false)String accessToken) {
-        if (!adminCheck(accessToken)) {return new ArrayList<>();}
-
-        return matchingService.matchingFailedRead();
+        // 2. 관리자라면 상태별 건수 + 그 상태의 한 페이지 조회
+        return matchingService.matchingAdminRead(status, page);
 
     }
 
