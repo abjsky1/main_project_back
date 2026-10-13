@@ -20,8 +20,10 @@ import main_project.model.dto.Lscore1Dto;
 import main_project.model.dto.Lscore2Dto;
 import main_project.model.dto.Lscore3Dto;
 import main_project.model.dto.LscoreRequestDto;
-
+import main_project.model.entity.MatchingEntity;
+import main_project.model.repository.MatchingRepository;
 import main_project.service.Lscore1Service;
+import main_project.service.MatchingSseService;
 import main_project.service.LoginService;
 import main_project.service.AuthorizationService;
 
@@ -32,6 +34,12 @@ import main_project.util.JwtUtil;
 @RequestMapping("/api/lscore")
 @RequiredArgsConstructor
 public class Lscore1Controller {
+
+    // 실시간 매칭 알림 서비스
+    private final MatchingSseService matchingSseService;
+
+    // 매칭된 화주 조회
+    private final MatchingRepository matchingRepository;
 
     private final Lscore1Service lscore1Service;
 
@@ -78,9 +86,10 @@ public class Lscore1Controller {
 
         }
 
+        
         // 4. 물류기업 매칭 조건 등록
         // Lscore1Service에서 조건 저장 후 자동 매칭 실행
-        return lscore1Service.lscoreWrite(
+        boolean writeResult = lscore1Service.lscoreWrite(
 
                 requestDto.getLscore1Dto(),
 
@@ -89,6 +98,39 @@ public class Lscore1Controller {
                 requestDto.getLscore3Dto()
 
         );
+
+        // 5. 조건 등록 성공 시 알림 전송
+        if (writeResult) {
+
+            // 해당 물류기업과 연결된 매칭 목록 조회
+            List<MatchingEntity> matchingEntities =
+                    matchingRepository.findByLscore1EntityMemberEntityMemberId(memberId);
+
+            // 각 매칭의 화주에게 알림 전송
+            for (MatchingEntity matchingEntity : matchingEntities) {
+
+                // 화주가 아직 검토하지 않은 추천인지 확인
+                if ("PENDING".equals(matchingEntity.getFinalStatus())
+                        && "WAITING".equals(matchingEntity.getShipperStatus())
+                        && "WAITING".equals(matchingEntity.getLogisticsStatus())) {
+
+                    // 화주 회원 ID 조회
+                    String shipperMemberId = matchingEntity
+                            .getCscore1Entity()
+                            .getMemberEntity()
+                            .getMemberId();
+
+                    // 해당 화주에게 실시간 알림
+                    matchingSseService.onMessage(shipperMemberId);
+
+                }
+
+            }
+
+        }
+
+        return writeResult;
+
 
     }
 

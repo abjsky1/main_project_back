@@ -23,6 +23,7 @@ import main_project.model.dto.CscoreRequestDto;
 
 import main_project.service.Cscore1Service;
 import main_project.service.LoginService;
+import main_project.service.MatchingSseService;
 import main_project.service.AuthorizationService;
 
 import main_project.util.JwtUtil;
@@ -32,6 +33,8 @@ import main_project.util.JwtUtil;
 @RequestMapping("/api/cscore")
 @RequiredArgsConstructor
 public class Cscore1Controller {
+
+    private final MatchingSseService matchingSseService;
 
     private final Cscore1Service cscore1Service;
 
@@ -78,9 +81,10 @@ public class Cscore1Controller {
 
         }
 
+        
         // 4. 화주 매칭 조건 등록
         // Cscore1Service에서 조건 저장 후 자동 매칭 실행
-        return cscore1Service.cscoreWrite(
+        boolean writeResult = cscore1Service.cscoreWrite(
 
                 requestDto.getCscore1Dto(),
 
@@ -89,6 +93,16 @@ public class Cscore1Controller {
                 requestDto.getCscore3Dto()
 
         );
+
+        // 5. 조건 등록이 성공하면 매칭 알림 갱신
+        if (writeResult) {
+
+            matchingSseService.onMessage(memberId);
+
+        }
+
+        return writeResult;
+
 
     }
 

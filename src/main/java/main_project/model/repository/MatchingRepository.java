@@ -35,6 +35,8 @@ public interface MatchingRepository extends JpaRepository<MatchingEntity, Intege
             Integer lscore1Id
     );
 
+    // 특정 물류기업 회원의 매칭 목록 조회
+    List<MatchingEntity> findByLscore1EntityMemberEntityMemberId(String memberId);
 
     // [4] 전체 매칭 결과 최신순 조회
     // 관리자 매칭 목록에서 사용
