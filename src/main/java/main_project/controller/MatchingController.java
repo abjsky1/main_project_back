@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.CookieValue;
 import lombok.RequiredArgsConstructor;
 
 import main_project.model.dto.MatchingDto;
-
+import main_project.model.entity.MatchingEntity;
+import main_project.model.repository.MatchingRepository;
 import main_project.service.MatchingService;
+import main_project.service.MatchingSseService;
 import main_project.service.LoginService;
 import main_project.service.AuthorizationService;
 import main_project.util.JwtUtil;
@@ -28,6 +30,12 @@ import main_project.util.JwtUtil;
 public class MatchingController {
 
     private final MatchingService matchingService;
+
+    // [추가] 실시간 매칭 알림 서비스
+    private final MatchingSseService matchingSseService;
+
+    // [추가] 매칭 상대방 회원 정보 조회
+    private final MatchingRepository matchingRepository;
 
     // [추가] 로그인 회원 확인
     private final JwtUtil jwtUtil;
@@ -59,7 +67,7 @@ public class MatchingController {
 
     }
 
-        //  자동 매칭 연결 목록 조회 (관리자)
+    // 자동 매칭 연결 목록 조회 (관리자)
     @GetMapping("/recommended")
     public List<MatchingDto> matchingRecommendedRead(
             @CookieValue(value = "AccessToken", required = false) String accessToken) {
@@ -100,7 +108,7 @@ public class MatchingController {
     }
 
 
-    //  최종 매칭 실패 목록 조회 (관리자)
+    // 최종 매칭 실패 목록 조회 (관리자)
     @GetMapping("/failed")
     public List<MatchingDto> matchingFailedRead(@CookieValue(value = "AccessToken", required = false)String accessToken) {
         if (!adminCheck(accessToken)) {
@@ -151,9 +159,18 @@ public class MatchingController {
             return false;
 
         }
-
+        
         // 3. 화주 매칭 요청
-        return matchingService.shipperAccept(matchingId, memberId);
+        boolean matchingResult = matchingService.shipperAccept(matchingId, memberId);
+
+        // 4. 매칭 요청 성공 시 알림 전송
+        if (matchingResult) {
+
+            matchingNotice(matchingId);
+
+        }
+
+        return matchingResult;
 
     }
 
@@ -176,10 +193,18 @@ public class MatchingController {
         }
 
         // 3. 화주 매칭 거절
-        return matchingService.shipperReject(matchingId, memberId);
+        boolean matchingResult = matchingService.shipperReject(matchingId, memberId);
+
+        // 4. 거절 성공 시 화주 알림 갱신
+        if (matchingResult) {
+
+            matchingSseService.onMessage(memberId);
+
+        }
+
+        return matchingResult;
 
     }
-
 
     // [5] 물류기업 매칭 수락
     // 관리자 승인 없이 매칭 완료
@@ -198,12 +223,20 @@ public class MatchingController {
             return false;
 
         }
-
+        
         // 3. 물류기업 수락
-        return matchingService.logisticsAccept(matchingId, memberId);
+        boolean matchingResult = matchingService.logisticsAccept(matchingId, memberId);
+
+        // 4. 수락 성공 시 양쪽 회원에게 알림
+        if (matchingResult) {
+
+            matchingNotice(matchingId);
+
+        }
+
+        return matchingResult;
 
     }
-
 
     // [6] 물류기업 매칭 거절
     @PostMapping("/logistics/reject/{matchingId}")
@@ -223,10 +256,18 @@ public class MatchingController {
         }
 
         // 3. 물류기업 매칭 거절
-        return matchingService.logisticsReject(matchingId, memberId);
+        boolean matchingResult = matchingService.logisticsReject(matchingId, memberId);
+
+        // 4. 거절 성공 시 양쪽 회원에게 알림
+        if (matchingResult) {
+
+            matchingNotice(matchingId);
+
+        }
+
+        return matchingResult;
 
     }
-
 
     // [7] 로그인 회원 본인 확인
     private boolean memberCheck(String accessToken, String memberId) {
@@ -305,6 +346,38 @@ public class MatchingController {
 
         // 5. 관리자라면 true 반환
         return true;
+
+    }
+
+    private void matchingNotice(Integer matchingId) {
+
+        // 1. 매칭 정보 조회
+        MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
+
+        // 2. 매칭 정보가 없으면 종료
+        if (matchingEntity == null) {
+            
+            return;
+
+        }
+
+        // 3. 화주 회원 ID 조회
+        String shipperMemberId = matchingEntity
+                .getCscore1Entity()
+                .getMemberEntity()
+                .getMemberId();
+
+        // 4. 물류기업 회원 ID 조회
+        String logisticsMemberId = matchingEntity
+                .getLscore1Entity()
+                .getMemberEntity()
+                .getMemberId();
+
+        // 5. 화주에게 알림 전송
+        matchingSseService.onMessage(shipperMemberId);
+
+        // 6. 물류기업에게 알림 전송
+        matchingSseService.onMessage(logisticsMemberId);
 
     }
 

@@ -696,11 +696,9 @@ public class MatchingService {
 
 
         // 조건을 통과한 업체가 있는지 확인할 변수
-
         boolean matchingResult = false;
 
         // [수정] 7. 등록된 물류기업을 하나씩 반복 비교
-
         for (Lscore1Entity lscore1Entity : lscore1Entities) {
 
             // [추가] 비활성 물류기업은 추천 후보에서 제외
@@ -832,7 +830,6 @@ public class MatchingService {
                     .build();
 
             // 13. 현재 물류기업의 추천 결과 저장
-
             MatchingEntity savedMatchingEntity = matchingRepository.save(matchingEntity);
 
             if (savedMatchingEntity.getMatchingId() == null) {
@@ -845,24 +842,19 @@ public class MatchingService {
 
         }
 
-        // 한 곳 이상 조건을 통과했다면 true
-
         return matchingResult;
 
     }
 
     // [5] 매칭 결과 전체 조회 (관리자)
-
     public List<MatchingDto> matchingRead() {
 
         // [수정] 전체 매칭 결과 최신순 조회
-
         List<MatchingEntity> matchingEntities = matchingRepository.findAllByOrderByCreatedAtDescMatchingIdDesc();
 
         List<MatchingDto> matchingDtos = new ArrayList<>();
 
         // 조회한 Entity를 DTO로 변환
-
         for (MatchingEntity matchingEntity : matchingEntities) {
 
             MatchingDto matchingDto = matchingDtoFrom(matchingEntity);
@@ -875,7 +867,7 @@ public class MatchingService {
 
     }
 
-        // 자동 매칭 연결 목록 조회 (관리자)
+    // 자동 매칭 연결 목록 조회 (관리자)
     public List<MatchingDto> matchingRecommendedRead() {
 
         List<MatchingEntity> matchingEntities = matchingRepository.findRecommendedMatchings();
@@ -972,11 +964,9 @@ public class MatchingService {
     // [7] 수출입기업(화주) 매칭 수락
 
     // A방식에서는 추천된 물류기업에 매칭을 요청하는 기능
-
     public boolean shipperAccept(Integer matchingId, String memberId) {
 
         // 1. 매칭 조회 및 잠금
-
         MatchingEntity matchingEntity = matchingFindForChange(matchingId);
 
         if (matchingEntity == null) {
@@ -1007,7 +997,6 @@ public class MatchingService {
                 .getMemberId();
 
         // 로그인 회원이 매칭 당사자가 아니면 처리 불가
-
         if (!shipperMemberId.equals(memberId)) {
 
             return false;
@@ -1015,7 +1004,6 @@ public class MatchingService {
         }
 
         // 3. 이미 종료된 매칭이면 처리 불가
-
         if (!"PENDING".equals(matchingEntity.getFinalStatus())) {
 
             return false;
@@ -1023,7 +1011,6 @@ public class MatchingService {
         }
 
         // 4. 화주가 아직 응답하지 않은 추천인지 확인
-
         if (!"WAITING".equals(matchingEntity.getShipperStatus())) {
 
             return false;
@@ -1031,7 +1018,6 @@ public class MatchingService {
         }
 
         // 5. 물류기업도 아직 응답하지 않은 상태여야 함
-
         if (!"WAITING".equals(matchingEntity.getLogisticsStatus())) {
 
             return false;
@@ -1039,7 +1025,6 @@ public class MatchingService {
         }
 
         // [추가] 6. 같은 화주 조건으로 이미 요청 또는 완료된 매칭 확인
-
         Integer cscore1Id = matchingEntity.getCscore1Entity().getCscore1Id();
 
         List<MatchingEntity> matchingEntities = matchingRepository.findBlockingRequests(cscore1Id);
@@ -1049,7 +1034,6 @@ public class MatchingService {
             if (!existingMatchingEntity.getMatchingId().equals(matchingId)) {
 
                 // 이미 다른 물류기업과 진행 중이거나 완료
-
                 return false;
 
             }
@@ -1090,11 +1074,9 @@ public class MatchingService {
 
         return true;
 
-
     }
 
     // [8] 수출입기업(화주) 매칭 거절
-
     public boolean shipperReject(Integer matchingId, String memberId) {
 
         MatchingEntity matchingEntity = matchingFindForChange(matchingId);
@@ -1113,7 +1095,6 @@ public class MatchingService {
         }
 
         // 실제 수출입기업 회원인지 확인
-
         String shipperMemberId = matchingEntity
 
                 .getCscore1Entity()
@@ -1129,7 +1110,6 @@ public class MatchingService {
         }
 
         // 이미 종료된 매칭은 거절 불가
-
         if (!"PENDING".equals(matchingEntity.getFinalStatus())) {
 
             return false;
@@ -1137,7 +1117,6 @@ public class MatchingService {
         }
 
         // 아직 요청하지 않은 추천만 거절 가능
-
         if (!"WAITING".equals(matchingEntity.getShipperStatus())) {
 
             return false;
@@ -1151,13 +1130,12 @@ public class MatchingService {
         }
 
         // 화주 거절 처리
-
         matchingEntity.setShipperStatus("REJECTED");
 
         // 매칭 실패 처리
-
         matchingEntity.setFinalStatus("FAILED");
 
+        // DB 저장
         matchingRepository.save(matchingEntity);
 
         return true;
@@ -1165,9 +1143,7 @@ public class MatchingService {
     }
 
     // [9] 물류기업 매칭 수락
-
     // [수정] 관리자 승인 없이 즉시 매칭 완료
-
     public boolean logisticsAccept(Integer matchingId, String memberId) {
 
         MatchingEntity matchingEntity = matchingFindForChange(matchingId);
@@ -1190,7 +1166,6 @@ public class MatchingService {
         }
 
         // 실제 물류기업 회원번호 확인
-
         String logisticsMemberId = matchingEntity
 
                 .getLscore1Entity()
@@ -1206,7 +1181,6 @@ public class MatchingService {
         }
 
         // 매칭이 진행 중인지 확인
-
         if (!"PENDING".equals(matchingEntity.getFinalStatus())) {
 
             return false;
@@ -1214,7 +1188,6 @@ public class MatchingService {
         }
 
         // 화주가 먼저 매칭 요청했는지 확인
-
         if (!"ACCEPTED".equals(matchingEntity.getShipperStatus())) {
 
             return false;
@@ -1222,7 +1195,6 @@ public class MatchingService {
         }
 
         // 물류기업이 아직 응답하지 않은 상태인지 확인
-
         if (!"WAITING".equals(matchingEntity.getLogisticsStatus())) {
 
             return false;
@@ -1230,13 +1202,11 @@ public class MatchingService {
         }
 
         // 물류기업 수락
-
         matchingEntity.setLogisticsStatus("ACCEPTED");
 
         // [수정] 관리자 승인 없이 자동 매칭 완료
-
         matchingEntity.setFinalStatus("COMPLETED");
-
+        
         matchingRepository.save(matchingEntity);
 
         return true;
@@ -1244,7 +1214,6 @@ public class MatchingService {
     }
 
     // [10] 물류기업 매칭 거절
-
     public boolean logisticsReject(Integer matchingId, String memberId) {
 
         MatchingEntity matchingEntity = matchingFindForChange(matchingId);
@@ -1263,7 +1232,6 @@ public class MatchingService {
         }
 
         // 실제 물류기업 회원번호 확인
-
         String logisticsMemberId = matchingEntity
 
                 .getLscore1Entity()
@@ -1279,7 +1247,6 @@ public class MatchingService {
         }
 
         // 매칭 진행 중인지 확인
-
         if (!"PENDING".equals(matchingEntity.getFinalStatus())) {
 
             return false;
@@ -1287,7 +1254,6 @@ public class MatchingService {
         }
 
         // 화주가 먼저 요청한 매칭이어야 함
-
         if (!"ACCEPTED".equals(matchingEntity.getShipperStatus())) {
 
             return false;
@@ -1295,7 +1261,6 @@ public class MatchingService {
         }
 
         // 아직 물류기업이 응답하지 않은 상태인지 확인
-
         if (!"WAITING".equals(matchingEntity.getLogisticsStatus())) {
 
             return false;
@@ -1303,21 +1268,20 @@ public class MatchingService {
         }
 
         // 물류기업 거절 처리
-
         matchingEntity.setLogisticsStatus("REJECTED");
 
         matchingEntity.setFinalStatus("FAILED");
 
+        
         matchingRepository.save(matchingEntity);
 
         return true;
 
+
     }
 
     // [11] 매칭 상태 변경 전 조회 및 잠금
-
     // [추가] 동일 화주가 여러 물류기업에 동시에 요청하는 상황 방지
-
     private MatchingEntity matchingFindForChange(Integer matchingId) {
 
         if (matchingId == null) {
@@ -1327,7 +1291,6 @@ public class MatchingService {
         }
 
         // 1. 변경하려는 매칭 조회
-
         MatchingEntity matchingEntity = matchingRepository.findById(matchingId).orElse(null);
 
         if (matchingEntity == null) {
@@ -1337,13 +1300,9 @@ public class MatchingService {
         }
 
         // 2. 매칭에 연결된 화주 조건 번호 확인
-
-        Integer cscore1Id =
-
-                matchingEntity.getCscore1Entity().getCscore1Id();
+        Integer cscore1Id = matchingEntity.getCscore1Entity().getCscore1Id();
 
         // 3. 화주 조건 조회 및 DB 잠금
-
         Cscore1Entity cscore1Entity = cscore1Repository.findForUpdate(cscore1Id).orElse(null);
 
         if (cscore1Entity == null) {
@@ -1353,7 +1312,6 @@ public class MatchingService {
         }
 
         // 4. 매칭 결과 다시 조회 및 DB 잠금
-
         matchingEntity = matchingRepository.findByMatchingId(matchingId).orElse(null);
 
         return matchingEntity;
@@ -1489,11 +1447,8 @@ public class MatchingService {
     }
 
     // [13] 기존 Controller 임시 호환용
-
     // A방식에서는 관리자 승인을 사용하지 않음
-
     // MatchingController 수정 시 이 메서드는 삭제 가능
-
     public boolean matchingApprove(Integer matchingId) {
 
         return false;
@@ -1501,11 +1456,8 @@ public class MatchingService {
     }
 
     // [14] 기존 Controller 임시 호환용
-
     // A방식에서는 관리자 반려를 사용하지 않음
-
     // MatchingController 수정 시 이 메서드는 삭제 가능
-
     public boolean matchingReject(Integer matchingId) {
 
         return false;
