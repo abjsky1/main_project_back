@@ -234,7 +234,7 @@ public class TradestatusService {
 
         return current.subtract(previous)
                 .multiply(BigDecimal.valueOf(100))
-                .divide(previous.abs(), 2, RoundingMode.HALF_UP);
+                .divide(previous.abs(), 1, RoundingMode.HALF_UP);
     }
 
     // 달러 → 억 달러

@@ -2,6 +2,7 @@ package main_project.controller;
 
 import java.util.List;
 
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,8 +12,9 @@ import main_project.model.dto.ExchangeDto;
 import main_project.service.ExchangeService;
 
 @RestController
-@RequestMapping("/api/exchange")      // 프론트 Vite 프록시가 /api 로 시작하는 주소만 백엔드로 전달
+@RequestMapping("/api/exchange")      
 @RequiredArgsConstructor
+@CrossOrigin("*")
 public class ExchangeController {
 
     private final ExchangeService exchangeService;
