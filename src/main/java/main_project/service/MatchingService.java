@@ -638,6 +638,17 @@ public class MatchingService {
 
         }
 
+        // 추가
+        // 이미 매칭 요청 중이거나 완료된 화물인지 확인
+        List<MatchingEntity> blockingMatchings = matchingRepository.findBlockingRequests(cscore1Id);
+
+        // 진행 중이거나 완료된 매칭이 있다면 새 추천 생성하지 않음
+        if (!blockingMatchings.isEmpty()) {
+
+            return false;
+
+        }
+
         // 3. 화주 물량/일정 조건 조회
 
         Cscore2Entity cscore2Entity = cscore2Repository.findByCscore1Entity(cscore1Entity).orElse(null);
@@ -962,8 +973,7 @@ public class MatchingService {
     }
 
     // [7] 수출입기업(화주) 매칭 수락
-
-    // A방식에서는 추천된 물류기업에 매칭을 요청하는 기능
+    // 추천된 물류기업에 매칭을 요청하는 기능
     public boolean shipperAccept(Integer matchingId, String memberId) {
 
         // 1. 매칭 조회 및 잠금
@@ -987,7 +997,6 @@ public class MatchingService {
         }
 
         // 2. 실제 화주 회원번호 확인
-
         String shipperMemberId = matchingEntity
 
                 .getCscore1Entity()
@@ -1065,7 +1074,7 @@ public class MatchingService {
                     && "WAITING".equals(other.getShipperStatus())
                     && "WAITING".equals(other.getLogisticsStatus())) {
 
-                other.setShipperStatus("REJECTED");
+                other.setShipperStatus("AUTO_REJECTED");
                 other.setFinalStatus("FAILED");
 
                 matchingRepository.save(other);
@@ -1267,13 +1276,49 @@ public class MatchingService {
 
         }
 
-        // 물류기업 거절 처리
+        
+        // 1. 물류기업 거절 처리
         matchingEntity.setLogisticsStatus("REJECTED");
-
         matchingEntity.setFinalStatus("FAILED");
 
-        
         matchingRepository.save(matchingEntity);
+
+        // 2. 해당 화주의 매칭 조건 번호 조회
+        Integer cscore1Id =
+                matchingEntity.getCscore1Entity().getCscore1Id();
+
+        // 3. 같은 화주 조건의 기존 추천 목록 조회
+        List<MatchingEntity> otherMatchings =
+                matchingRepository.findByCscore1EntityCscore1Id(cscore1Id);
+
+        // 4. 자동 거절되었던 추천만 다시 복구
+        for (MatchingEntity other : otherMatchings) {
+
+            if ("AUTO_REJECTED".equals(other.getShipperStatus())
+                    && "FAILED".equals(other.getFinalStatus())
+                    && "WAITING".equals(other.getLogisticsStatus())) {
+
+                // 물류기업이 활성 상태이고 매칭에 동의한 경우만 복구
+                if (Boolean.TRUE.equals(
+                        other.getLscore1Entity().getMemberEntity().getStatus())
+                        && Boolean.TRUE.equals(
+                        other.getLscore1Entity().getMatchingAgree())) {
+
+                    // 다시 추천 대기 상태로 변경
+                    other.setShipperStatus("WAITING");
+                    other.setFinalStatus("PENDING");
+
+                    matchingRepository.save(other);
+
+                }
+
+            }
+
+        }
+
+        // 5. 기존 화주 조건으로 자동 매칭 다시 실행
+        // 이전에 추천되지 않은 새로운 물류기업도 검사
+        matchingWrite(cscore1Id);
 
         return true;
 
