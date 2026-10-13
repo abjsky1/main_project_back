@@ -40,13 +40,13 @@ public class LoginController {
         if (result == null) {return false;}
 
         try{
-        // 3. 로그인 성공시 memberId를 이용해서 JWT Access token 생성
+        // 3. 로그인 성공시 memberId를 이용해서 JWT에 Access token 생성 요청 
         String accessToken = jwtUtil.createAccessToken(result.getMemberId());
         String refreshToken = jwtUtil.createRefreshToken(result.getMemberId());
 
     
 
-           // 4. Access Token을 쿠키에 저장
+        // 4. Access Token을 쿠키에 저장
         ResponseCookie accesscookie = ResponseCookie
                                 .from("AccessToken", accessToken)
                                 .path("/")
@@ -79,7 +79,7 @@ public class LoginController {
         return true; } catch ( Exception e ) { e.printStackTrace(); return false;}
     }
 
-        // 현재 로그인한 회원 정보 조회
+        // 현재 로그인한 회원 정보 조회 // 
         @GetMapping("/me")
         public MemberDto getMyInfo(@CookieValue(value = "AccessToken", required = false)String accessToken) {
             // 1. AccessToken 검증 후 회원 ID 확인

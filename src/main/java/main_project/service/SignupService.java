@@ -35,7 +35,7 @@ public class SignupService {
     // 공개 회원가입에서는 화주·물류 유형만 허용
     if (!"201".equals(signupId) && !"301".equals(signupId)) {return false;}
 
-    // DB에 등록된 가입 유형과 일반회원 권한 조회
+    // DB에 등록된 가입 유형과 일반회원 권한 연결
     SignupEntity signup = signupRepository.findById(signupId).orElse(null);
 
     RoleEntity role = roleRepository.findById(1).orElse(null);
@@ -50,7 +50,7 @@ public class SignupService {
     // memberDto 에 pk 값으로 UUID 를 넣어주기
     String pk = UUID.randomUUID().toString();
     memberDto.setMemberId(pk);
-
+        
     // 사용자가 입력한 평문 비밀번호를 BCrypt로 해서
     String encodedPassword = passwordEncoder.encode(memberDto.getUserPassword());
 
@@ -67,7 +67,6 @@ public class SignupService {
     if (savedEntity != null) {
         return true;
     }
-
     return false;
 }
 
