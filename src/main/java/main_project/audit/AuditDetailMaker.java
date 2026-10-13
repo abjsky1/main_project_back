@@ -31,9 +31,6 @@ public class AuditDetailMaker {
 //  매칭 거절 / 반려 요청에서 사유가 담기는 칸 이름 (팀원 API 와 이름을 맞춰야 함)
     private static final String REJECT_REASON_FIELD = "rejectReason";
 
-//  role 테이블에서 관리자(ROLE_ADMIN) 번호
-    private static final int ADMIN_ROLE_ID = 2;
-
     private final AuditRequestReader requestReader;    // 요청에서 이메일 , 번호 , 사유 꺼내기
     private final MemberRepository memberRepository;   // 권한/상태 변경 대상 회원 찾기
 
@@ -130,8 +127,8 @@ public class AuditDetailMaker {
             return detail + targetText(memberEntity, memberId);
         }
 
-    //  getRoleId() 는 role 정보를 추가로 조회하지 않고도 번호를 읽을 수 있음
-        boolean isAdmin = memberEntity.getRoleEntity().getRoleId() == ADMIN_ROLE_ID;
+    //  바뀐 뒤의 권한이 관리자인지 (MemberEntity.isAdmin( ) — role 정보를 추가로 조회하지 않고 번호만 읽음)
+        boolean isAdmin = memberEntity.isAdmin();
         if (isAdmin) {
             return "관리자 지정" + targetText(memberEntity, memberId);
         }

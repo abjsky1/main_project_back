@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import main_project.model.dto.AuthorizationCountDto;
 import main_project.model.dto.AuthorizationDto;
 import main_project.model.entity.MemberEntity;
+import main_project.model.entity.RoleEntity;
 import main_project.model.repository.AuditRepository;
 import main_project.model.repository.MemberRepository;
 import main_project.model.repository.RoleRepository;
@@ -22,9 +23,7 @@ import main_project.util.JwtUtil;
 @Transactional
 public class AuthorizationService {
 
-//  role 테이블 번호 (MainDBSampleData.sql : 1 = ROLE_USER , 2 = ROLE_ADMIN)
-    private static final int ROLE_USER_ID = 1;
-    private static final int ROLE_ADMIN_ID = 2;
+//  role 테이블 번호는 RoleEntity 의 USER_ROLE_ID / ADMIN_ROLE_ID , 관리자인지는 MemberEntity.isAdmin( ) 으로 확인
 
 //  실제 회원이 아닌 감사 로그용 공통 계정 (사용자 목록 · 사용자 수 · 권한 변경에서 제외)
     private static final List<String> SYSTEM_MEMBER_IDS = List.of(AuditService.GUEST_MEMBER_ID, AuditService.WITHDRAWN_MEMBER_ID);
@@ -63,7 +62,7 @@ public class AuthorizationService {
         if (memberEntity.getStatus() == false) { return null; }
 
     //  5. 관리자(role 2)가 아니면 null
-        if (memberEntity.getRoleEntity().getRoleId() != ROLE_ADMIN_ID) { return null; }
+        if (!memberEntity.isAdmin()) { return null; }
 
     //  6. 관리자 확인 완료 → 관리자 회원 번호 반환 (컨트롤러가 "내 계정인지" 비교할 때 사용)
         return memberId;
@@ -120,7 +119,8 @@ public class AuthorizationService {
         MemberEntity memberEntity = findRealMember(memberId);
         if (memberEntity == null) { return false; }
 
-        int nextRoleId = memberEntity.getRoleEntity().getRoleId() == ROLE_ADMIN_ID ? ROLE_USER_ID : ROLE_ADMIN_ID;
+    //  지금 관리자면 → 일반 사용자 번호 , 아니면 → 관리자 번호
+        int nextRoleId = memberEntity.isAdmin() ? RoleEntity.USER_ROLE_ID : RoleEntity.ADMIN_ROLE_ID;
 
     //  setter 로 바꾸면 트랜잭션이 끝날 때 JPA 가 UPDATE 해줌 (dirty checking)
         memberEntity.setRoleEntity(roleRepository.getReferenceById(nextRoleId));

@@ -1,11 +1,16 @@
 package main_project.service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import main_project.audit.AuditTargets;
 import main_project.model.dto.AuditDto;
+import main_project.model.dto.AuditPageDto;
 import main_project.model.dto.AuditSaveDto;
 import main_project.model.entity.ActionEntity;
 import main_project.model.entity.AuditEntity;
@@ -38,6 +44,9 @@ public class AuditService {
 //  action_detail 컬럼 길이 (AuditEntity 와 같게)
     private static final int DETAIL_MAX_LENGTH = 300;
 
+//  감사 로그 목록 한 페이지에 보여 줄 건수 (화면에서 바꿀 수 없게 서버에서 정함)
+    private static final int PAGE_SIZE = 50;
+
     private final AuditRepository auditRepository;
     private final MemberRepository memberRepository;
     private final ActionRepository actionRepository;
@@ -47,17 +56,52 @@ public class AuditService {
     private Map<String, Integer> actionIdMap = null;
 
 
-//  감사 로그 목록 조회 (필터 조건 + 최신순)
-//  user : 이메일/이름 검색어 , action : 작업 유형 검색어 , result : 성공(true)/실패(false) , 비어 있으면 조건 없음
+//  감사 로그 목록 조회 — 한 페이지(50건)씩 (필터 조건 + 최신순)
+//  user   : 이메일/이름 검색어 , action : 작업 유형 검색어 , result : 성공(true)/실패(false) , 비어 있으면 조건 없음
+//  period : 기간 (today / 7days / 30days / 6months / 1year , 그 밖의 값이나 null 이면 전체 기간)
+//  page   : 몇 번째 페이지 (0 부터 — 0 = 1페이지)
+//  돌려주는 것 : 이번 페이지 로그 + 페이지 버튼에 필요한 숫자 (AuditPageDto)
     @Transactional (readOnly = true)
-    public List<AuditDto> findAll(String user, String action, Boolean result){
+    public AuditPageDto findAll(String user, String action, Boolean result, String period, int page){
 
-    //  1. 조건에 맞는 감사 로그 조회 (사용자 , 회원 유형 , 작업 유형까지 같이)     → 쿼리 1번
-        List<AuditEntity> auditEntities = auditRepository.search(blankToNull(user), blankToNull(action), result);
+    //  1. 페이지 번호 정리 : 0 보다 작으면 0 (주소를 직접 고쳐서 page=-1 같은 값이 와도 오류가 나지 않게)
+        if (page < 0) { page = 0; }
 
-    //  2. 엔티티 → DTO 로 변환
-        return auditEntities.stream().map( (auditEntity) -> { return AuditDto.from(auditEntity); } ).toList();
-        
+    //  2. 기간 → 시작 시각 (이 시각 이후에 생긴 로그만 조회 , null 이면 기간 조건 없음)
+    //     - 오늘 : 오늘 0시 0분부터 (지금부터 24시간 전이 아니라 "날짜가 오늘인 것")
+    //     - 나머지 : 지금 시각에서 거꾸로 (minusDays(7) = 7일 전 , minusMonths(6) = 6개월 전)
+    //     - "글자".equals(period) : period 가 null 이어도 오류 없이 false (period.equals("today") 는 null 이면 오류)
+        LocalDateTime from = null;
+        if ("today".equals(period))   { from = LocalDate.now().atStartOfDay(); }
+        if ("7days".equals(period))   { from = LocalDateTime.now().minusDays(7); }
+        if ("30days".equals(period))  { from = LocalDateTime.now().minusDays(30); }
+        if ("6months".equals(period)) { from = LocalDateTime.now().minusMonths(6); }
+        if ("1year".equals(period))   { from = LocalDateTime.now().minusYears(1); }
+
+    //  3. 페이지 요청 만들기 : "page 번째 페이지를 50건씩"
+    //     PageRequest.of( 페이지 번호 , 한 페이지 건수 ) → Pageable (Repository 에 넘기면 LIMIT / OFFSET 이 붙음)
+    //     정렬은 쿼리의 ORDER BY(최신순)를 그대로 씀
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
+
+    //  4. 조건에 맞는 감사 로그 중 이번 페이지만 조회 (사용자 , 회원 유형 , 작업 유형까지 같이)
+    //     → 목록 쿼리 1번 + 전체 건수 COUNT 쿼리 1번 (Repository 의 countQuery)
+        Page<AuditEntity> auditPage = auditRepository.search(blankToNull(user), blankToNull(action), result, from, pageable);
+
+    //  5. 이번 페이지의 엔티티 목록 → DTO 목록
+    //     getContent( ) : Page 상자 안의 "이번 페이지 목록" 만 꺼냄 (최대 50건)
+        List<AuditDto> logs = auditPage.getContent().stream().map( (auditEntity) -> { return AuditDto.from(auditEntity); } ).toList();
+
+    //  6. 목록 + 페이지 숫자 → 응답 DTO 하나로 묶기 (AuthorizationService 의 사용자 목록 응답과 같은 방식)
+    //     getNumber( )        : 지금 페이지 번호 (0 부터)
+    //     getTotalPages( )    : 전체 페이지 수
+    //     getTotalElements( ) : 조건에 맞는 전체 로그 수
+        return AuditPageDto.builder()
+            .logs(logs)
+            .page(auditPage.getNumber())
+            .size(PAGE_SIZE)
+            .totalPages(auditPage.getTotalPages())
+            .totalCount(auditPage.getTotalElements())
+            .build();
     }
 
 

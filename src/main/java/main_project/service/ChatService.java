@@ -38,7 +38,7 @@ import main_project.model.repository.RoomRepository;
 //
 //  [방 관련]     ① 내 채팅방 보기  ② 상담 시작(on)  ③ 상담 종료(off)  ④ 관리자 채팅방 목록
 //  [메시지 관련] ⑤ 메시지 목록  ⑥ 읽음 처리  ⑦ 메시지 보내기  ⑧ 탈퇴 처리
-//  [웹소켓]      ⑨ 저장이 확정된 뒤 보내기
+//  [웹소켓]      ⑨ 저장이 확정된 뒤 보내기  ⑩ 구독해도 되는지 확인
 //  =====================================================================
 @Service
 @RequiredArgsConstructor
@@ -66,9 +66,10 @@ public class ChatService {
 //  메시지 내용 최대 글자 수 (MessageEntity 의 content 칸 길이와 같게 — AuditService 의 DETAIL_MAX_LENGTH 와 같은 방식)
     private static final int CONTENT_MAX_LENGTH = 1000;
 
-//  관리자 권한 번호 (role 테이블 : 1 = ROLE_USER , 2 = ROLE_ADMIN — MypageService 와 같은 방식)
-//  ⑦ 메시지 보내기에서 "지금도 관리자인지" 를 DB 값으로 다시 확인할 때 사용
-    private static final int ROLE_ADMIN_ID = 2;
+//  ---------- 웹소켓 구독 주소 (WebSocketConfig 의 구독 주소 /sub 아래) ----------
+//  보내는 곳(⑨ sendAfterCommit)과 구독 검사(⑩ canSubscribe)가 같은 글자를 써야 해서 한 곳에 둠
+    private static final String ADMIN_TOPIC = "/sub/chat/admin";          // 관리자 화면 (모든 방의 메시지)
+    private static final String ROOM_TOPIC_PREFIX = "/sub/chat/room/";    // 회원 화면 (뒤에 방 번호 — 예: /sub/chat/room/3)
 
     private final RoomRepository roomRepository;
     private final MessageRepository messageRepository;
@@ -446,8 +447,8 @@ public class ChatService {
         MemberEntity senderEntity = memberRepository.findById(memberId).orElse(null);
         if (senderEntity == null || senderEntity.getStatus() == false) { return null; }
 
-    //  4. 관리자인지 지금 DB 값으로 확인 (role 2 = 관리자)
-        boolean isAdmin = senderEntity.getRoleEntity().getRoleId() == ROLE_ADMIN_ID;
+    //  4. 관리자인지 지금 DB 값으로 확인 (MemberEntity.isAdmin( ) — role 2 = 관리자)
+        boolean isAdmin = senderEntity.isAdmin();
 
     //  5. 방 찾기 (없으면 null)
     //     SELECT * FROM room WHERE room_id = ?
@@ -569,7 +570,7 @@ public class ChatService {
 
     //  1. 관리자 화면으로 보내기 (상담원 이름 그대로)
     //     convertAndSend( 보낼 주소 , 내용물 ) : day062 와 같음 — 내용물은 JSON 글자로 바뀌어서 전달됨
-        messageTemplate.convertAndSend("/sub/chat/admin", messageDto);
+        messageTemplate.convertAndSend(ADMIN_TOPIC, messageDto);
 
     //  2. 회원에게 보낼 때는 상담원(ADMIN) 이름을 "고객센터" 로 바꿈 (① 의 4번과 같은 규칙)
     //     1번에서 이미 JSON 글자로 바뀌어 보내졌기 때문에 , 지금 바꿔도 관리자에게 간 내용은 그대로
@@ -578,7 +579,56 @@ public class ChatService {
         }
 
     //  3. 그 방의 회원 화면으로 보내기
-        messageTemplate.convertAndSend("/sub/chat/room/" + messageDto.getRoomId(), messageDto);
+        messageTemplate.convertAndSend(ROOM_TOPIC_PREFIX + messageDto.getRoomId(), messageDto);
+    }
+
+
+//  =====================================================================
+//  ⑩ 구독해도 되는지 확인 — 웹소켓으로 구독할 때마다 ChatChannelInterceptor 가 부름
+//  - 관리자 주소 /sub/chat/admin          : 관리자만
+//  - 방 주소     /sub/chat/room/{roomId}  : 그 방의 회원 또는 관리자 (③ 상담 종료의 2번과 같은 규칙)
+//  - 그 밖의 주소 : 아무도 안 됨 (화면이 쓰는 구독 주소는 위 2개뿐)
+//  - 관리자인지 · 활성 회원인지는 구독할 때마다 DB 에서 확인 (⑦ 메시지 보내기의 3 · 4번과 같은 방식)
+//  - 돌려주는 것 : 구독해도 되면 true
+//  =====================================================================
+    @Transactional (readOnly = true)
+    public boolean canSubscribe(String destination, String memberId){
+
+    //  1. 로그인 안 했거나 , 주소가 없으면 false
+        if (memberId == null || destination == null) { return false; }
+
+    //  2. 회원 확인 (없는 회원이거나 비활성 회원이면 false)
+    //     SELECT * FROM member WHERE member_id = ?
+        MemberEntity memberEntity = memberRepository.findById(memberId).orElse(null);
+        if (memberEntity == null || memberEntity.getStatus() == false) { return false; }
+
+    //  3. 관리자인지 지금 DB 값으로 확인 (MemberEntity.isAdmin( ) — role 2 = 관리자)
+        boolean isAdmin = memberEntity.isAdmin();
+
+    //  4. 관리자 주소 : 관리자만
+        if (destination.equals(ADMIN_TOPIC)) { return isAdmin; }
+
+    //  5. 방 주소가 아니면 false
+        if (!destination.startsWith(ROOM_TOPIC_PREFIX)) { return false; }
+
+    //  6. 주소 끝의 방 번호 꺼내기 ("/sub/chat/room/3" → 3)
+    //     숫자가 아니면 (예: "/sub/chat/room/abc") Integer.valueOf 가 오류를 내므로 false
+        Integer roomId;
+        try {
+            roomId = Integer.valueOf(destination.substring(ROOM_TOPIC_PREFIX.length()));
+        } catch (NumberFormatException e) {
+            return false;
+        }
+
+    //  7. 방 찾기 (없으면 false)
+    //     SELECT * FROM room WHERE room_id = ?
+        RoomEntity roomEntity = roomRepository.findById(roomId).orElse(null);
+        if (roomEntity == null) { return false; }
+
+    //  8. 권한 확인 : 관리자는 모든 방 , 회원은 내 방만 (탈퇴해서 주인이 없는 방이면 false)
+        if (isAdmin) { return true; }
+        MemberEntity owner = roomEntity.getMemberEntity();
+        return owner != null && memberId.equals(owner.getMemberId());
     }
 
 }

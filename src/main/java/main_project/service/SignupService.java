@@ -38,7 +38,7 @@ public class SignupService {
     // DB에 등록된 가입 유형과 일반회원 권한 연결
     SignupEntity signup = signupRepository.findById(signupId).orElse(null);
 
-    RoleEntity role = roleRepository.findById(1).orElse(null);
+    RoleEntity role = roleRepository.findById(RoleEntity.USER_ROLE_ID).orElse(null);   // 일반 회원 권한 (role 1)
 
     if (signup == null || role == null) {return false;}
 
