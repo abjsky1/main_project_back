@@ -99,8 +99,15 @@ public class SearchService {
 
         hsCode = hsCode.trim();
 
-        // 국가를 입력하지 않았다면 전체를 검색
-        // 입력했다면 앞뒤 공백 제거
+        // HS 코드는 숫자 10자리만 허용
+        if (!hsCode.matches("[0-9]{10}")) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "HS코드는 숫자 10자리로 입력하세요."
+            );
+        }
+
+        // 국가를 입력하지 않았다면 전체를 검색 및 입력했다면 앞뒤 공백 제거
         if (country == null || country.isBlank()) {
             country = "전체";
         } else {
