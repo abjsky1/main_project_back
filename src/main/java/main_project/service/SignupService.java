@@ -14,6 +14,8 @@ import main_project.model.entity.RoleEntity;
 import main_project.model.entity.SignupEntity;
 import main_project.model.repository.RoleRepository;
 import main_project.model.repository.SignupRepository;
+import main_project.util.HmacUtil;
+import main_project.util.PiiNormalizer;
 
 @Service 
 @RequiredArgsConstructor 
@@ -23,6 +25,7 @@ public class SignupService {
     private final MemberRepository memberRepository;
     private final RoleRepository roleRepository;
     private final SignupRepository signupRepository;
+    private final HmacUtil hmacUtil;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     // 회원가입
@@ -42,6 +45,34 @@ public class SignupService {
 
     if (signup == null || role == null) {return false;}
 
+    // 개인정보 정규화 (같은 사람이 다르게 입력해도 같은 값으로 저장 · 중복확인 되도록)
+    //  - 이메일 : 공백 제거 + 소문자 , 사업자번호 · 전화번호 : 하이픈 · 공백 제거 , 이름 : 앞뒤 공백만 제거
+    String userEmail = PiiNormalizer.normalizeEmail(memberDto.getUserEmail());
+    String businessRegNo = PiiNormalizer.normalizeBusinessRegNo(memberDto.getBusinessRegNo());
+    String userPhone = PiiNormalizer.normalizePhone(memberDto.getUserPhone());
+    String managerName = PiiNormalizer.normalizeName(memberDto.getManagerName());
+
+    // 빈 값 · 길이 확인 (암호화 전 평문 기준 , 예전 DB 칸 길이와 같은 제한)
+    //  - 해시 칸이 null 이면 중복확인이 안 되므로 이메일 · 사업자번호는 반드시 있어야 함
+    if (isBlankOrTooLong(userEmail, 100) || isBlankOrTooLong(businessRegNo, 12)
+            || isBlankOrTooLong(userPhone, 20) || isBlankOrTooLong(managerName, 50)
+            || memberDto.getUserPassword() == null || memberDto.getUserPassword().isBlank()) {
+        return false;
+    }
+
+    // HMAC 검색값으로 중복 확인 (암호문은 매번 달라서 이메일 칸으로는 비교 불가)
+    String userEmailHash = hmacUtil.hash(userEmail);
+    String businessRegNoHash = hmacUtil.hash(businessRegNo);
+
+    if (memberRepository.existsByUserEmailHash(userEmailHash)) {return false;}           // 이미 가입된 이메일
+    if (memberRepository.existsByBusinessRegNoHash(businessRegNoHash)) {return false;}   // 이미 가입된 사업자번호
+
+    // 정규화한 값으로 다시 넣기 (저장할 때 EncryptedStringConverter 가 자동 암호화)
+    memberDto.setUserEmail(userEmail);
+    memberDto.setBusinessRegNo(businessRegNo);
+    memberDto.setUserPhone(userPhone);
+    memberDto.setManagerName(managerName);
+
     // 요청에서 받은 권한·상태 대신 서버가 설정
     memberDto.setSignupEntity(signup);
     memberDto.setRoleEntity(role);
@@ -60,7 +91,12 @@ public class SignupService {
     // UUID 가 추가된 memberDto 를 엔티티로 바꿔
     MemberEntity memberEntity = memberDto.toEntity();
 
+    // 검색값은 DTO 에 칸이 없으니 엔티티에 직접 넣기
+    memberEntity.setUserEmailHash(userEmailHash);
+    memberEntity.setBusinessRegNoHash(businessRegNoHash);
+
     // 엔티티를 리포지토리를 이용해 저장
+    // (동시에 같은 이메일로 가입하면 위 중복확인을 둘 다 통과할 수 있지만 , DB unique 가 한 건만 저장되게 막는다)
     MemberEntity savedEntity = memberRepository.save(memberEntity);
 
     // 저장이 되면 트루 , 아니면 false
@@ -70,7 +106,10 @@ public class SignupService {
     return false;
 }
 
-
+    // null · 빈 값이거나 최대 길이를 넘으면 true
+    private boolean isBlankOrTooLong(String value, int maxLength) {
+        return value == null || value.isEmpty() || value.length() > maxLength;
+    }
 
 
 }
