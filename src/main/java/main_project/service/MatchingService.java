@@ -16,6 +16,8 @@ import jakarta.transaction.Transactional;
 
 import lombok.RequiredArgsConstructor;
 
+import main_project.service.MatchingAiService;
+
 import main_project.model.dto.MatchingDto;
 
 import main_project.model.dto.MatchingPageDto;
@@ -57,6 +59,8 @@ import main_project.model.repository.MatchingRepository;
 @Transactional
 
 public class MatchingService {
+
+    private final MatchingAiService matchingAiService;
 
     private final MatchingRepository matchingRepository;
 
@@ -1540,8 +1544,64 @@ public class MatchingService {
                 .build();
 
         return matchingDto;
-
+    
     }
+
+
+    // [추가] 기존 매칭 조건을 Gemini 평가용 JSON으로 변환
+    public String matchingAiJson(Integer matchingId, String memberId) {
+
+        // 1. 기존 매칭 결과 조회
+        MatchingEntity matchingEntity =
+                matchingRepository.findById(matchingId).orElse(null);
+
+        if (matchingEntity == null || memberId == null) {
+            return null;
+        }
+
+        // 2. 연결된 화주와 물류기업 조건
+        Cscore1Entity cscore1 = matchingEntity.getCscore1Entity();
+        Lscore1Entity lscore1 = matchingEntity.getLscore1Entity();
+
+        // 3. 본인의 매칭인지 확인
+        String shipperId = cscore1.getMemberEntity().getMemberId();
+        String logisticsId = lscore1.getMemberEntity().getMemberId();
+
+        boolean shipper = memberId.equals(shipperId);
+        boolean logistics = memberId.equals(logisticsId)
+                && "ACCEPTED".equals(matchingEntity.getShipperStatus());
+
+        if (!shipper && !logistics) {
+            return null;
+        }
+
+        // 4. 물량과 일정 조건 조회
+        Cscore2Entity cscore2 =
+                cscore2Repository.findByCscore1Entity(cscore1).orElse(null);
+
+        Lscore2Entity lscore2 =
+                lscore2Repository.findByLscore1Entity(lscore1).orElse(null);
+
+        if (cscore2 == null || lscore2 == null) {
+            return null;
+        }
+
+        // 5. 필수 데이터 확인
+        if (cscore1.getHsCode() == null
+                || lscore1.getHsCode() == null
+                || cscore2.getRequestWeight() == null
+                || cscore2.getDesiredDate() == null
+                || lscore2.getAvailableCapacity() == null
+                || lscore2.getAvailableDate() == null) {
+            return null;
+        }
+
+        // 6. 기존 매칭 조건을 JSON으로 변환
+        return matchingAiService.createMatchingJson(
+                cscore1, cscore2, lscore1, lscore2);
+    }
+
+
 
     // [13] 기존 Controller 임시 호환용
     // A방식에서는 관리자 승인을 사용하지 않음
