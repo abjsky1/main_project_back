@@ -36,6 +36,9 @@ public class AuthorizationService {
 
     private final JwtUtil jwtUtil;
 
+//  고객센터 채팅의 회원 캐시 지우기 (권한 · 상태가 바뀌면 채팅에도 바로 반영되게 — ChatService ⑪)
+    private final ChatService chatService;
+
 
 //  [관리자 확인] 요청한 사람이 관리자인지 확인 (관리자 API 4개가 맨 앞에서 호출)
 //  - 관리자면 그 관리자의 회원 번호를 , 관리자가 아니면 null 을 돌려줌
@@ -143,6 +146,9 @@ public class AuthorizationService {
     //  setter 로 바꾸면 트랜잭션이 끝날 때 JPA 가 UPDATE 해줌 (dirty checking)
         memberEntity.setRoleEntity(roleRepository.getReferenceById(nextRoleId));
 
+    //  채팅 캐시에 남은 "관리자인지" 지우기 (변경이 확정된 뒤에 지움)
+        chatService.forgetMember(memberId);
+
         return true;
     }
 
@@ -155,6 +161,9 @@ public class AuthorizationService {
         if (memberEntity == null) { return false; }
 
         memberEntity.setStatus(!memberEntity.getStatus());
+
+    //  채팅 캐시에 남은 "활성 회원인지" 지우기 (변경이 확정된 뒤에 지움)
+        chatService.forgetMember(memberId);
 
         return true;
     }

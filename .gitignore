@@ -38,6 +38,9 @@ out/
 
 src/main/resources/application.properties
 
+# 암호화 키 (각자 컴퓨터에만 둠)
+.env
+
 # 빌드 결과물에도 복사본이 생기니까 같이 제외
 build/
 target/

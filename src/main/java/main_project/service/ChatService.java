@@ -1,15 +1,24 @@
 package main_project.service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import lombok.RequiredArgsConstructor;
 import main_project.model.dto.MessageDto;
@@ -37,9 +46,19 @@ import main_project.model.repository.RoomRepository;
 //  - 웹소켓 실시간 보내기 : 메시지를 저장하는 곳마다 "※ 웹소켓 보내기 예약" 한 줄
 //    → 저장이 확정(commit)된 "뒤" 에 Spring 이 맨 아래 ⑨ sendAfterCommit 을 자동으로 부름
 //
+//  - Redis 캐시 (cache-aside) : 메시지 · 구독 · 읽음 처리마다 하던 회원 · 방 SELECT 를 줄임
+//      chat:member:{회원번호} = { status , admin , name }   60초 보관
+//      chat:room:{방번호}     = { owner , status }          60초 보관
+//    → Redis 에 있으면 DB 에 가지 않고 , 없으면 DB 에서 읽어서 Redis 에 넣어 둠 (서버 시작 때 미리 넣지 않음)
+//    → 값이 바뀌면 저장이 확정된 뒤 캐시를 지움 → 다음 요청이 DB 에서 새 값을 읽음
+//        방 : 상담 시작 · 종료 · 탈퇴 (모두 SYSTEM 메시지를 남기므로 ⑨ 에서 지움)
+//        회원 : 권한 · 상태 · 이름 변경 , 탈퇴 (⑪ forgetMember 를 부름)
+//      혹시 지우지 못해도 60초가 지나면 저절로 사라짐 (최대 60초 늦게 반영)
+//
 //  [방 관련]     ① 내 채팅방 보기  ② 상담 시작(on)  ③ 상담 종료(off)  ④ 관리자 채팅방 목록
 //  [메시지 관련] ⑤ 메시지 목록  ⑥ 읽음 처리  ⑦ 메시지 보내기  ⑧ 탈퇴 처리
 //  [웹소켓]      ⑨ 저장이 확정된 뒤 보내기  ⑩ 구독해도 되는지 확인
+//  [캐시]        ⑪ 회원 캐시 지우기  ⑫ 서버 시작 때 채팅 캐시 비우기
 //  =====================================================================
 @Service
 @RequiredArgsConstructor
@@ -70,6 +89,12 @@ public class ChatService {
     private static final String ADMIN_TOPIC = "/sub/chat/admin";          // 관리자 화면 (모든 방의 메시지)
     private static final String ROOM_TOPIC_PREFIX = "/sub/chat/room/";    // 회원 화면 (뒤에 방 번호 — 예: /sub/chat/room/3)
 
+//  ---------- Redis 캐시 키 (RedisTokenService 의 "RT:" 처럼 앞글자로 구분) ----------
+//  채팅이 쓰는 Redis 키는 모두 "chat:" 으로 시작 → ⑫ 에서 한 번에 비울 수 있음
+    private static final String MEMBER_CACHE_PREFIX = "chat:member:";   // 뒤에 회원 번호
+    private static final String ROOM_CACHE_PREFIX = "chat:room:";       // 뒤에 방 번호
+    private static final Duration CACHE_TTL = Duration.ofSeconds(60);   // 캐시 보관 시간
+
     private final RoomRepository roomRepository;
     private final MessageRepository messageRepository;
     private final MemberRepository memberRepository;
@@ -79,6 +104,9 @@ public class ChatService {
 
 //  "저장이 확정되면 보내 줘" 하고 예약하는 도구 (예약한 내용은 ⑨ sendAfterCommit 이 받음)
     private final ApplicationEventPublisher eventPublisher;
+
+//  Redis 조작 도구 (RedisTokenService 와 같은 것) — 회원 · 방 캐시
+    private final StringRedisTemplate stringRedisTemplate;
 
 
 //  =====================================================================
@@ -395,24 +423,34 @@ public class ChatService {
 //  =====================================================================
     public boolean markRead(Integer roomId, String memberId, boolean isAdmin){
 
-    //  1. 방 찾기 (없으면 false)
+    //  1. 방 찾기 — Redis 캐시 먼저 , 없으면 DB (⑦ 메시지 보내기의 5번과 같음)
         if (roomId == null) { return false; }
-        RoomEntity roomEntity = roomRepository.findById(roomId).orElse(null);
-        if (roomEntity == null) { return false; }
+        String roomKey = ROOM_CACHE_PREFIX + roomId;
+        Map<Object, Object> roomCache = stringRedisTemplate.opsForHash().entries(roomKey);
+        if (roomCache.isEmpty()) {
+            RoomEntity roomEntity = roomRepository.findById(roomId).orElse(null);
+            if (roomEntity == null) { return false; }
+            MemberEntity owner = roomEntity.getMemberEntity();
+            roomCache = Map.of(
+                "owner", owner == null ? "" : owner.getMemberId(),
+                "status", roomEntity.getStatus() ? "1" : "0");
+            stringRedisTemplate.opsForHash().putAll(roomKey, roomCache);
+            stringRedisTemplate.expire(roomKey, CACHE_TTL);
+        }
 
     //  2. 권한 확인 : 관리자는 모든 방 , 회원은 내 방만 (③ 상담 종료의 2번과 같음)
+    //     owner 가 "" 이면 탈퇴한 회원의 방 → 어떤 회원 번호와도 같지 않음
         if (!isAdmin) {
-            MemberEntity owner = roomEntity.getMemberEntity();
-            boolean isOwner = memberId != null && owner != null && memberId.equals(owner.getMemberId());
+            boolean isOwner = memberId != null && memberId.equals(roomCache.get("owner"));
             if (!isOwner) { return false; }
         }
 
-    //  3. 읽은 시각을 지금으로 — setter 로 바꾸면 메소드가 끝날 때 JPA 가 UPDATE 해 줌 (dirty checking)
-    //     UPDATE room SET admin_read_at = ? WHERE room_id = ?   (회원이면 member_read_at)
+    //  3. 읽은 시각을 지금으로 — 방을 SELECT 하지 않고 그 칸만 바로 UPDATE (RoomRepository 의 updateXxxReadAt)
+    //     UPDATE room SET admin_read_at = ? , updated_at = ? WHERE room_id = ?   (회원이면 member_read_at)
         if (isAdmin) {
-            roomEntity.setAdminReadAt(LocalDateTime.now());
+            roomRepository.updateAdminReadAt(roomId, LocalDateTime.now());
         } else {
-            roomEntity.setMemberReadAt(LocalDateTime.now());
+            roomRepository.updateMemberReadAt(roomId, LocalDateTime.now());
         }
 
         return true;
@@ -423,11 +461,12 @@ public class ChatService {
 //  ⑦ 메시지 보내기 (그 방의 회원 또는 관리자) — 웹소켓 /pub/chat/message (6단계에서 연결)
 //  - 받는 값 : 어느 방에(roomId) , 무슨 내용을(content) — MessageSendDto
 //  - 누가 보냈는지는 받지 않음 → 컨트롤러가 웹소켓 연결 때 쿠키로 확인한 memberId 로 정함
-//  - 관리자인지는 연결할 때 값을 믿지 않고 , 메시지마다 DB 에서 다시 확인 (3 · 4번)
-//    → 연결된 채로 관리자 권한을 빼거나 비활성 처리해도 다음 메시지부터 바로 반영됨
+//  - 관리자인지는 연결할 때 값을 믿지 않고 , 메시지마다 다시 확인 (3 · 4번)
+//    → 연결된 채로 관리자 권한을 빼거나 비활성 처리해도 다음 메시지부터 반영됨 (바꿀 때 ⑪ 이 캐시를 지움)
+//  - 회원 · 방 확인은 Redis 캐시로 (3 · 5번) → 메시지 1개당 SQL : 4개 → 2개 (INSERT message , UPDATE room)
 //  - 저장하지 않는 경우 (null 반환)
 //      로그인 안 함 , 내용이 비었거나 1000자 초과 , 없는 회원 · 비활성 회원 , 없는 방 , 남의 방 , 종료된 방
-//  - 돌려주는 것 : 저장된 메시지 (상담원 이름 그대로 — 관리자 기준)
+//  - 돌려주는 것 : 저장된 메시지 (컨트롤러는 쓰지 않음 — 화면에는 ⑨ 가 웹소켓으로 보냄)
 //  =====================================================================
     public MessageDto sendMessage(MessageSendDto messageSendDto, String memberId){
 
@@ -440,55 +479,101 @@ public class ChatService {
         String content = messageSendDto.getContent().trim();
         if (content.isEmpty() || content.length() > CONTENT_MAX_LENGTH) { return null; }
 
-    //  3. 보낸 사람 확인 (없는 회원이거나 비활성 회원이면 null)
-    //     권한 확인(6번)에 관리자인지가 필요해서 , 방보다 먼저 조회
-    //     SELECT * FROM member WHERE member_id = ?
-        MemberEntity senderEntity = memberRepository.findById(memberId).orElse(null);
-        if (senderEntity == null || senderEntity.getStatus() == false) { return null; }
+    //  3. 보낸 사람 확인 — Redis 캐시 먼저 , 없으면 DB (cache-aside)
+    //     권한 확인(6번)에 관리자인지가 필요해서 , 방보다 먼저 확인
+    //     Redis : chat:member:{회원번호} = { status : "1"(활성) / "0" , admin : "1"(관리자) / "0" , name : 담당자 이름 }
+    //     Redis 의 Hash 는 글자만 담을 수 있어서 true / false 를 "1" / "0" 으로 저장
+        String memberKey = MEMBER_CACHE_PREFIX + memberId;
+        Map<Object, Object> memberCache = stringRedisTemplate.opsForHash().entries(memberKey);   // 없으면 빈 Map
+        if (memberCache.isEmpty()) {
+        //  3-1. 캐시에 없음 → DB 조회 (없는 회원이면 null)
+        //       SELECT * FROM member WHERE member_id = ?
+            MemberEntity senderEntity = memberRepository.findById(memberId).orElse(null);
+            if (senderEntity == null) { return null; }
+        //  3-2. Redis 에 60초 보관 → 60초 안에 오는 메시지 · 구독은 DB 에 가지 않음
+        //       관리자인지는 MemberEntity.isAdmin( ) — role 2 = 관리자
+            memberCache = Map.of(
+                "status", senderEntity.getStatus() ? "1" : "0",
+                "admin", senderEntity.isAdmin() ? "1" : "0",
+                "name", senderEntity.getManagerName());
+            stringRedisTemplate.opsForHash().putAll(memberKey, memberCache);
+            stringRedisTemplate.expire(memberKey, CACHE_TTL);
+        }
+    //  3-3. 비활성 회원이면 null
+        if (!"1".equals(memberCache.get("status"))) { return null; }
 
-    //  4. 관리자인지 지금 DB 값으로 확인 (MemberEntity.isAdmin( ) — role 2 = 관리자)
-        boolean isAdmin = senderEntity.isAdmin();
+    //  4. 관리자인지 · 보낸 사람 이름 꺼내기
+        boolean isAdmin = "1".equals(memberCache.get("admin"));
+        String senderName = (String) memberCache.get("name");
 
-    //  5. 방 찾기 (없으면 null)
-    //     SELECT * FROM room WHERE room_id = ?
-        RoomEntity roomEntity = roomRepository.findById(messageSendDto.getRoomId()).orElse(null);
-        if (roomEntity == null) { return null; }
+    //  5. 방 확인 — Redis 캐시 먼저 , 없으면 DB (3번과 같은 방식)
+    //     Redis : chat:room:{방번호} = { owner : 방 주인 회원 번호 (탈퇴한 회원의 방이면 "") , status : "1"(상담 중) / "0" }
+        Integer roomId = messageSendDto.getRoomId();
+        String roomKey = ROOM_CACHE_PREFIX + roomId;
+        Map<Object, Object> roomCache = stringRedisTemplate.opsForHash().entries(roomKey);
+        if (roomCache.isEmpty()) {
+        //  5-1. 캐시에 없음 → DB 조회 (없는 방이면 null)
+        //       SELECT * FROM room WHERE room_id = ?
+            RoomEntity roomEntity = roomRepository.findById(roomId).orElse(null);
+            if (roomEntity == null) { return null; }
+        //  5-2. Redis 에 60초 보관 (getMemberId( ) 는 LAZY 라도 추가 조회 없이 번호를 꺼낼 수 있음)
+            MemberEntity owner = roomEntity.getMemberEntity();
+            roomCache = Map.of(
+                "owner", owner == null ? "" : owner.getMemberId(),
+                "status", roomEntity.getStatus() ? "1" : "0");
+            stringRedisTemplate.opsForHash().putAll(roomKey, roomCache);
+            stringRedisTemplate.expire(roomKey, CACHE_TTL);
+        }
 
     //  6. 권한 확인 : 관리자는 모든 방 , 회원은 내 방만 (③ 상담 종료의 2번과 같음)
         if (!isAdmin) {
-            MemberEntity owner = roomEntity.getMemberEntity();
-            boolean isOwner = owner != null && memberId.equals(owner.getMemberId());
+            boolean isOwner = memberId.equals(roomCache.get("owner"));
             if (!isOwner) { return null; }
         }
 
     //  7. 종료된 방이면 null (상담 중일 때만 대화할 수 있음 — 회원은 [상담 시작] 으로 다시 켜야 함)
-        if (roomEntity.getStatus() == false) { return null; }
+        if (!"1".equals(roomCache.get("status"))) { return null; }
 
     //  8. 메시지 저장
+    //     - 방 : getReferenceById — SELECT 없이 방 번호만 연결 (AuditService 의 4번과 같은 방법 , 방이 있는지는 5번에서 확인함)
     //     - 보낸 사람 종류 : 관리자면 ADMIN , 아니면 MEMBER
     //     - 보낸 사람 이름 : 보낸 그 순간의 이름을 복사 (관리자면 상담원 이름 → 누가 답했는지 남음)
     //     INSERT INTO message (room_id , sender_type , sender_name , content , created_at) VALUES (...)
         SenderType senderType = isAdmin ? SenderType.ADMIN : SenderType.MEMBER;
         MessageEntity messageEntity = MessageEntity.builder()
-            .roomEntity(roomEntity)
+            .roomEntity(roomRepository.getReferenceById(roomId))
             .senderType(senderType)
-            .senderName(senderEntity.getManagerName())
+            .senderName(senderName)
             .content(content)
             .build();
         messageEntity = messageRepository.save(messageEntity);
-    //     ※ 웹소켓 보내기 예약 — 보낸 사람 화면에도 이 경로로 말풍선이 뜸 (보낸 사람도 같은 주소를 구독 중)
-        eventPublisher.publishEvent(MessageDto.from(messageEntity));
 
-    //  9. 보낸 사람은 자기 메시지까지 읽은 것으로 (내가 보낸 메시지 앞에 상대가 보낸 것도 이미 화면에서 봤으므로)
-    //     메시지를 저장한 "뒤" 의 시각이라 방금 저장한 메시지보다 늦음
+    //  9. 웹소켓으로 보낼 DTO
+    //     MessageDto.from( ) 을 쓰지 않는 이유 : from 은 방 상태(getStatus)를 읽어서 , 번호만 연결한 방을 SELECT 하게 됨
+    //     → 방 상태는 7번에서 상담 중(true)인 것을 확인했으므로 그대로 넣음
+        MessageDto messageDto = MessageDto.builder()
+            .messageId(messageEntity.getMessageId())
+            .roomId(roomId)
+            .senderType(senderType)
+            .senderName(senderName)
+            .content(content)
+            .createdAt(messageEntity.getCreatedAt())
+            .roomStatus(true)
+            .build();
+    //     ※ 웹소켓 보내기 예약 — 보낸 사람 화면에도 이 경로로 말풍선이 뜸 (보낸 사람도 같은 주소를 구독 중)
+        eventPublisher.publishEvent(messageDto);
+
+    //  10. 보낸 사람은 자기 메시지까지 읽은 것으로 (내가 보낸 메시지 앞에 상대가 보낸 것도 이미 화면에서 봤으므로)
+    //      메시지를 저장한 "뒤" 의 시각이라 방금 저장한 메시지보다 늦음
+    //      방을 SELECT 하지 않고 그 칸만 바로 UPDATE (⑥ 읽음 처리의 3번과 같음)
         if (isAdmin) {
-            roomEntity.setAdminReadAt(LocalDateTime.now());
+            roomRepository.updateAdminReadAt(roomId, LocalDateTime.now());
         } else {
-            roomEntity.setMemberReadAt(LocalDateTime.now());
+            roomRepository.updateMemberReadAt(roomId, LocalDateTime.now());
         }
 
-    //  10. 저장된 메시지 반환
-        return MessageDto.from(messageEntity);
+    //  11. 저장된 메시지 반환
+        return messageDto;
     }
 
 
@@ -539,7 +624,11 @@ public class ChatService {
     //     UPDATE room SET member_id = NULL , status = false ... WHERE room_id = ?
     //     ※ 이 UPDATE 는 MypageService 의 회원 DELETE 보다 먼저 실행됨
     //       (JPA 는 모아 둔 SQL 을 실행할 때 INSERT → UPDATE → DELETE 순서로 실행)
+    //     방 캐시는 4번의 SYSTEM 메시지 덕분에 ⑨ 가 지움
         roomEntity.setMemberEntity(null);
+
+    //  6. 회원 캐시 지우기 (탈퇴가 확정된 뒤 — ⑪)
+        forgetMember(memberId);
     }
 
 
@@ -562,10 +651,18 @@ public class ChatService {
 //  - 보내는 곳 2군데
 //      /sub/chat/admin         : 관리자 화면 (모든 방 , 상담원 이름 그대로)
 //      /sub/chat/room/{roomId} : 그 방의 회원 화면 (상담원 이름은 "고객센터" 로)
+//
+//  - 방 캐시 지우기 : SYSTEM 메시지는 상담 시작 · 종료 · 탈퇴 때만 생김 = 방 상태 · 주인이 바뀐 때
+//    → 저장이 확정된 "뒤" 에 지워야 , 다른 요청이 확정 전의 옛날 값을 다시 캐시에 넣는 일이 없음
 //  =====================================================================
     @TransactionalEventListener
     @Transactional (propagation = Propagation.NOT_SUPPORTED)
     public void sendAfterCommit(MessageDto messageDto){
+
+    //  0. 방 상태가 바뀐 메시지(SYSTEM)면 방 캐시 지우기 → 다음 메시지 · 구독은 DB 에서 새 상태를 읽음
+        if (messageDto.getSenderType() == SenderType.SYSTEM) {
+            stringRedisTemplate.delete(ROOM_CACHE_PREFIX + messageDto.getRoomId());
+        }
 
     //  1. 관리자 화면으로 보내기 (상담원 이름 그대로)
     //     convertAndSend( 보낼 주소 , 내용물 ) : day062 와 같음 — 내용물은 JSON 글자로 바뀌어서 전달됨
@@ -587,7 +684,7 @@ public class ChatService {
 //  - 관리자 주소 /sub/chat/admin          : 관리자만
 //  - 방 주소     /sub/chat/room/{roomId}  : 그 방의 회원 또는 관리자 (③ 상담 종료의 2번과 같은 규칙)
 //  - 그 밖의 주소 : 아무도 안 됨 (화면이 쓰는 구독 주소는 위 2개뿐)
-//  - 관리자인지 · 활성 회원인지는 구독할 때마다 DB 에서 확인 (⑦ 메시지 보내기의 3 · 4번과 같은 방식)
+//  - 관리자인지 · 활성 회원인지 · 방 주인은 Redis 캐시로 확인 (⑦ 메시지 보내기의 3 · 5번과 같은 방식)
 //  - 돌려주는 것 : 구독해도 되면 true
 //  =====================================================================
     @Transactional (readOnly = true)
@@ -596,13 +693,25 @@ public class ChatService {
     //  1. 로그인 안 했거나 , 주소가 없으면 false
         if (memberId == null || destination == null) { return false; }
 
-    //  2. 회원 확인 (없는 회원이거나 비활성 회원이면 false)
-    //     SELECT * FROM member WHERE member_id = ?
-        MemberEntity memberEntity = memberRepository.findById(memberId).orElse(null);
-        if (memberEntity == null || memberEntity.getStatus() == false) { return false; }
+    //  2. 회원 확인 — Redis 캐시 먼저 , 없으면 DB (⑦ 메시지 보내기의 3번과 같음)
+        String memberKey = MEMBER_CACHE_PREFIX + memberId;
+        Map<Object, Object> memberCache = stringRedisTemplate.opsForHash().entries(memberKey);
+        if (memberCache.isEmpty()) {
+        //  SELECT * FROM member WHERE member_id = ?
+            MemberEntity memberEntity = memberRepository.findById(memberId).orElse(null);
+            if (memberEntity == null) { return false; }
+            memberCache = Map.of(
+                "status", memberEntity.getStatus() ? "1" : "0",
+                "admin", memberEntity.isAdmin() ? "1" : "0",
+                "name", memberEntity.getManagerName());
+            stringRedisTemplate.opsForHash().putAll(memberKey, memberCache);
+            stringRedisTemplate.expire(memberKey, CACHE_TTL);
+        }
+    //     비활성 회원이면 false
+        if (!"1".equals(memberCache.get("status"))) { return false; }
 
-    //  3. 관리자인지 지금 DB 값으로 확인 (MemberEntity.isAdmin( ) — role 2 = 관리자)
-        boolean isAdmin = memberEntity.isAdmin();
+    //  3. 관리자인지 (⑦ 메시지 보내기의 4번과 같음)
+        boolean isAdmin = "1".equals(memberCache.get("admin"));
 
     //  4. 관리자 주소 : 관리자만
         if (destination.equals(ADMIN_TOPIC)) { return isAdmin; }
@@ -619,15 +728,74 @@ public class ChatService {
             return false;
         }
 
-    //  7. 방 찾기 (없으면 false)
-    //     SELECT * FROM room WHERE room_id = ?
-        RoomEntity roomEntity = roomRepository.findById(roomId).orElse(null);
-        if (roomEntity == null) { return false; }
-
-    //  8. 권한 확인 : 관리자는 모든 방 , 회원은 내 방만 (탈퇴해서 주인이 없는 방이면 false)
+    //  7. 관리자는 모든 방을 구독할 수 있음 (방이 있는지는 상관없음 — 없는 방이면 메시지가 오지 않을 뿐)
         if (isAdmin) { return true; }
-        MemberEntity owner = roomEntity.getMemberEntity();
-        return owner != null && memberId.equals(owner.getMemberId());
+
+    //  8. 방 주인 확인 — Redis 캐시 먼저 , 없으면 DB (⑦ 메시지 보내기의 5번과 같음)
+        String roomKey = ROOM_CACHE_PREFIX + roomId;
+        Map<Object, Object> roomCache = stringRedisTemplate.opsForHash().entries(roomKey);
+        if (roomCache.isEmpty()) {
+        //  SELECT * FROM room WHERE room_id = ?
+            RoomEntity roomEntity = roomRepository.findById(roomId).orElse(null);
+            if (roomEntity == null) { return false; }
+            MemberEntity owner = roomEntity.getMemberEntity();
+            roomCache = Map.of(
+                "owner", owner == null ? "" : owner.getMemberId(),
+                "status", roomEntity.getStatus() ? "1" : "0");
+            stringRedisTemplate.opsForHash().putAll(roomKey, roomCache);
+            stringRedisTemplate.expire(roomKey, CACHE_TTL);
+        }
+
+    //  9. 회원은 내 방만 (탈퇴해서 주인이 없는 방이면 owner 가 "" 라서 false)
+        return memberId.equals(roomCache.get("owner"));
+    }
+
+
+//  =====================================================================
+//  ⑪ 회원 캐시 지우기 — 회원의 권한 · 상태 · 이름이 바뀌거나 탈퇴할 때 부름
+//  - 부르는 곳 : AuthorizationService (권한 · 상태 변경) , MypageService (이름 변경) , ⑧ 탈퇴 처리
+//  - 저장이 확정(commit)된 "뒤" 에 지움 (⑨ 와 같은 이유)
+//      확정 전에 지우면 , 그 사이에 온 메시지가 DB 의 옛날 값을 읽어서 다시 60초 동안 캐시에 넣을 수 있음
+//  - TransactionSynchronizationManager : 지금 트랜잭션이 끝난 뒤에 할 일을 등록하는 도구 (MatchingSseService 와 같은 것)
+//    트랜잭션 밖에서 불리면(등록할 곳이 없으면) 바로 지움
+//  =====================================================================
+    public void forgetMember(String memberId){
+
+    //  1. 회원 번호가 없으면 할 일 없음
+        if (memberId == null) { return; }
+        String memberKey = MEMBER_CACHE_PREFIX + memberId;
+
+    //  2. 트랜잭션 안이면 → 확정된 뒤에 지우기 예약
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    stringRedisTemplate.delete(memberKey);
+                }
+            });
+            return;
+        }
+
+    //  3. 트랜잭션 밖이면 → 바로 지우기
+        stringRedisTemplate.delete(memberKey);
+    }
+
+
+//  =====================================================================
+//  ⑫ 서버가 켜질 때 채팅 캐시 비우기 (AuditService 의 @EventListener(ApplicationReadyEvent.class) 와 같은 방식)
+//  - 왜 필요한가 : ddl-auto = create-drop 이라 서버를 다시 켜면 DB 는 비워지는데 , Redis 는 따로 켜져 있어서 값이 남음
+//      → 지난번 "1번 방의 주인 = A" 가 남아 있으면 , 새로 만든 1번 방(주인 B)을 A 가 구독할 수 있음
+//  - "chat:" 으로 시작하는 키만 지움 (로그인 토큰 "RT:" 는 그대로)
+//  - SCAN : 키를 조금씩(100개씩) 나눠서 찾음
+//      KEYS 는 한 번에 전부 찾느라 그동안 Redis 가 다른 명령(로그인 · 채팅)을 처리하지 못해서 쓰지 않음
+//  =====================================================================
+    @EventListener (ApplicationReadyEvent.class)
+    @Transactional (propagation = Propagation.NOT_SUPPORTED)
+    public void clearChatCache(){
+        ScanOptions scanOptions = ScanOptions.scanOptions().match("chat:*").count(100).build();
+        try (Cursor<String> cursor = stringRedisTemplate.scan(scanOptions)) {
+            cursor.forEachRemaining((key) -> stringRedisTemplate.delete(key));
+        }
     }
 
 }

@@ -65,6 +65,9 @@ public class MypageService {
         memberEntity.setManagerName(managerName);
         memberEntity.setCompanyAddress(companyAddress);
 
+        // 5. 채팅 캐시에 남은 이름 지우기 → 다음 채팅 메시지부터 바뀐 이름으로 저장됨 (ChatService ⑪)
+        chatService.forgetMember(memberId);
+
         return true;
     }
 
