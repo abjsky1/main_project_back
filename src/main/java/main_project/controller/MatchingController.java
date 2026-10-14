@@ -10,15 +10,17 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.CookieValue;
 
 import lombok.RequiredArgsConstructor;
-
+import main_project.model.dto.MatchingAiDto;
 import main_project.model.dto.MatchingDto;
 import main_project.model.dto.MatchingPageDto;
 import main_project.model.entity.MatchingEntity;
 import main_project.model.repository.MatchingRepository;
 import main_project.service.MatchingService;
+import main_project.service.MatchingAiService;
 import main_project.service.MatchingSseService;
 import main_project.service.LoginService;
 import main_project.service.AuthorizationService;
@@ -31,6 +33,8 @@ import main_project.util.JwtUtil;
 public class MatchingController {
 
     private final MatchingService matchingService;
+
+    private final MatchingAiService matchingAiService;
 
     // [추가] 실시간 매칭 알림 서비스
     private final MatchingSseService matchingSseService;
@@ -314,6 +318,44 @@ public class MatchingController {
         return true;
 
     }
+
+
+    
+    // [추가] 내 매칭에서 버튼 클릭 시 Gemini 점수 비교
+    @PostMapping(
+            value = "/ai/compare/{matchingId}",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public MatchingAiDto matchingAiCompare(
+            @PathVariable("matchingId") Integer matchingId,
+            @CookieValue(value = "AccessToken", required = false)
+            String accessToken) {
+
+        // 1. 로그인 확인
+        if (accessToken == null) {
+            return null;
+        }
+
+        String memberId = jwtUtil.getMemberIdFromToken(accessToken);
+
+        if (memberId == null || !memberCheck(accessToken, memberId)) {
+            return null;
+        }
+
+        // 2. 본인의 매칭 조건을 JSON으로 변환
+        String matchingJson =
+                matchingService.matchingAiJson(matchingId, memberId);
+
+        if (matchingJson == null) {
+            return null;
+        }
+
+        // 3. Gemini 평가 결과 반환
+        // 기존 matching DB 점수는 수정하지 않음
+        return matchingAiService.evaluateJson(matchingJson);
+    }
+
+
 
     private void matchingNotice(Integer matchingId) {
 
