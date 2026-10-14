@@ -130,7 +130,7 @@ public class MypageService {
 
 
 //  회원 탈퇴 , 성공하면 true
-//  - 회원은 DB 에서 삭제 → 매칭 조건 · 매칭 결과 · 관심 국가는 cascade 로 같이 삭제 (MemberEntity 아래쪽 참고)
+//  - 회원은 DB 에서 삭제 → 매칭 조건 · 매칭 결과는 cascade 로 같이 삭제 (MemberEntity 아래쪽 참고)
 //  - 감사 로그는 "탈퇴 회원" 공통 계정으로 옮겨서 남김
 //  - 고객센터 채팅방 · 대화도 지우지 않고 남김 (채팅방의 회원 연결만 끊음 — ChatService.closeRoomByWithdrawal)
 //  - 쿠키 · 레디스 토큰 삭제는 컨트롤러가 함 (이 메소드가 성공해서 DB 삭제가 끝난 뒤에)
@@ -178,9 +178,8 @@ public class MypageService {
         //    MemberEntity 의 cascade = CascadeType.REMOVE 덕분에 아래 자식 데이터도 같이 삭제됨
         //      회원 ─┬─ 화주 매칭 조건(cscore1) ─┬─ 2번 · 3번 조건 (cscore2 , cscore3)
         //            │                           └─ 매칭 결과 (matching)
-        //            ├─ 물류 매칭 조건(lscore1) ─┬─ 2번 · 3번 조건 (lscore2 , lscore3)
-        //            │                           └─ 매칭 결과 (matching)
-        //            └─ 관심 국가 (interest)
+        //            └─ 물류 매칭 조건(lscore1) ─┬─ 2번 · 3번 조건 (lscore2 , lscore3)
+        //                                        └─ 매칭 결과 (matching)
         //    (JPA 가 자식 → 부모 순서로 DELETE 해 줌 . 6번의 로그 UPDATE 는 위에서 이미 실행이 끝난 상태)
         //    (7번의 채팅방 UPDATE 도 이 DELETE 보다 먼저 실행됨 — JPA 는 UPDATE → DELETE 순서로 실행)
         memberRepository.delete(memberEntity);

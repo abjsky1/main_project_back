@@ -59,7 +59,6 @@ public class AuditTargets {
         add("PUT",    "/api/mypage/password",   "비밀번호 변경",  "비밀번호 변경");
         add("POST",   "/api/mypage/withdraw",   "회원 탈퇴",      "회원 탈퇴");
     //  (탈퇴에 성공하면 회원이 이미 삭제된 뒤라서 , 이 로그는 "탈퇴 회원" 공통 계정으로 기록됨 — AuditService.record)
-    //  (관심 국가 추가·삭제 /api/interest 는 action 테이블에 맞는 작업 유형이 없어서 등록 안 함)
 
     //  ---------- 고객센터 채팅 (ChatController) ----------
         add("POST",   "/api/chat/my-room/open",        "상담 시작", "고객센터 상담 시작");
