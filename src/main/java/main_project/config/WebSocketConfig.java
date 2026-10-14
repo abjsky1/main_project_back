@@ -3,9 +3,11 @@ package main_project.config;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketTransportRegistration;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,7 +23,11 @@ import lombok.RequiredArgsConstructor;
 //
 //  - day062 와 달라진 점 : 검사 장치 2개를 붙임
 //    1. ChatHandshakeInterceptor : 연결되는 순간 로그인 쿠키(AccessToken)로 누구인지 확인 (로그인 안 했으면 연결 거절)
-//    2. ChatChannelInterceptor   : 구독 · 보내기 프레임마다 검사 (남의 방 · 관리자 주소 구독 막기 , /sub 로 바로 보내기 막기)
+//    2. ChatChannelInterceptor   : 구독 · 보내기 프레임마다 검사 (남의 방 · 관리자 주소 구독 막기 , /sub 로 바로 보내기 막기 , 보내기 속도 제한)
+//
+//  - 연결 안정화
+//    1. 하트비트(heartbeat) : 서버와 화면이 10초마다 "살아 있음" 신호를 주고받음 → 조용히 끊긴 연결을 빨리 알아챔
+//    2. 크기 · 시간 제한     : 너무 큰 메시지 , 느린 화면 때문에 서버가 붙잡혀 있지 않게
 //  =====================================================================
 @Configuration                   // 스프링 설정 클래스로 등록
 @EnableWebSocketMessageBroker    // STOMP 브로커(메시지 전달자) 기능 켜기
@@ -39,8 +45,22 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry){
 
+    //  하트비트 신호를 정해진 시간마다 보내 주는 도구 (일꾼 스레드 1개)
+    //  - setDaemon(true) : 서버를 끌 때 이 스레드가 남아서 종료를 막지 않게
+    //  - initialize( )   : 설정을 마친 뒤 일꾼 스레드를 실제로 만듦 (부르지 않으면 동작하지 않음)
+        ThreadPoolTaskScheduler heartbeatScheduler = new ThreadPoolTaskScheduler();
+        heartbeatScheduler.setPoolSize(1);
+        heartbeatScheduler.setThreadNamePrefix("ws-heartbeat-");
+        heartbeatScheduler.setDaemon(true);
+        heartbeatScheduler.initialize();
+
     //  /sub 로 시작하는 주소를 구독한 화면들에게 브로커가 메시지를 전달
-        registry.enableSimpleBroker("/sub");
+    //  - setHeartbeatValue( { 서버가 보내는 간격 , 화면에서 받기를 기대하는 간격 } ) — 단위 ms
+    //    이전에는 설정이 없어서 연결 응답이 heart-beat:0,0 (하트비트 꺼짐) 이었음
+    //    → 와이파이가 끊기는 등 연결이 조용히 죽어도 서버 · 화면 모두 한참 동안 몰랐음
+        registry.enableSimpleBroker("/sub")
+            .setHeartbeatValue(new long[] {10000, 10000})
+            .setTaskScheduler(heartbeatScheduler);
 
     //  /pub 로 시작하는 주소로 온 메시지는 @MessageMapping 메소드로 보냄
     //  예) /pub/chat/message → ChatMessageController 의 @MessageMapping("/chat/message")
@@ -69,6 +89,24 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration){
         registration.interceptors(chatChannelInterceptor);
+    }
+
+
+//  웹소켓 크기 · 시간 제한
+    @Override
+    public void configureWebSocketTransport(WebSocketTransportRegistration registration){
+
+    //  1. 화면 → 서버 메시지 1개의 최대 크기 : 8KB (기본값 64KB)
+    //     채팅 내용은 최대 1000자(ChatService · 입력창 maxLength) → 한글 1자 3바이트라 약 3KB + STOMP 머리글
+    //     → 8KB 를 넘는 건 정상 화면이 보낸 것이 아님 (넘으면 서버가 그 연결을 끊음)
+        registration.setMessageSizeLimit(8 * 1024);
+
+    //  2. 서버 → 화면으로 아직 못 보내고 쌓여 있는 양의 한도 : 512KB (기본값과 같음 — 눈에 보이게 적어 둠)
+    //     화면(네트워크)이 느려서 이만큼 쌓이면 그 연결을 끊음 → 느린 화면 하나 때문에 서버 메모리가 계속 늘지 않게
+        registration.setSendBufferSizeLimit(512 * 1024);
+
+    //  3. 메시지 1개를 보내는 데 걸릴 수 있는 최대 시간 : 10초 (기본값과 같음)
+        registration.setSendTimeLimit(10 * 1000);
     }
 
 }
