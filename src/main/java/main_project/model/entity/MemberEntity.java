@@ -70,7 +70,7 @@ public class MemberEntity extends BaseTime {
 
 //  ---------- 검색 · 중복확인용 HMAC-SHA-256 값 (16진수 64글자) ----------
 //  - 정규화(PiiNormalizer)한 값을 HmacUtil로 만든 값. 같은 입력이면 항상 같은 값 → WHERE · unique 가능
-//  - nullable : 샘플 SQL은 평문 회원만 넣고, MemberPiiMigrationRunner가 서버 시작 후 채운다
+//  - nullable : 예전에는 평문 샘플 회원을 서버 시작 후 암호화하면서 채웠음. 지금은 샘플 SQL에 값이 들어있음 (not null 전환은 보류)
 //  - 이름 · 전화번호는 검색값을 만들지 않음 (이름은 동명이인이 있어 unique 불가)
 
     @Column(name = "user_email_hash", length = 64, unique = true)
