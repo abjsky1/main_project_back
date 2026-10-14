@@ -16,14 +16,8 @@ import main_project.model.entity.MemberEntity;
 public interface MemberRepository extends JpaRepository <MemberEntity , String> {
 
 
-// [사용 금지] 이메일 평문으로 회원 조회
-//  - user_email 칸은 암호화되어(매번 다른 암호문) 이 메소드는 항상 "없음"을 돌려준다
-//  - 대신 findByUserEmailHash( hmacUtil.hash( PiiNormalizer.normalizeEmail( 이메일 ) ) ) 사용
-//  - AuditRequestReader 가 아직 사용 중이라 컴파일 유지를 위해 남겨둠 → 바꾸면 삭제
-@Deprecated
-Optional<MemberEntity> findByUserEmail(String userEmail);
-
 //  ---------- 암호화된 개인정보 검색 (HMAC 검색값 사용) ----------
+//  - 이메일 평문으로 찾는 findByUserEmail 은 삭제함 (user_email 칸이 암호화되어 항상 "없음" — AuditRequestReader 도 검색값으로 바꿈)
 //  - 넣는 값 : PiiNormalizer 로 정규화 → HmacUtil.hash( ) 로 만든 64글자 값
 //  SELECT * FROM member WHERE user_email_hash = ?
 Optional<MemberEntity> findByUserEmailHash(String userEmailHash);

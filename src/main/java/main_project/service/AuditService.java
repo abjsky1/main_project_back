@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -86,15 +87,39 @@ public class AuditService {
     //     정렬은 쿼리의 ORDER BY(최신순)를 그대로 씀
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
 
-    //  4. 조건에 맞는 감사 로그 중 이번 페이지만 조회 (사용자 , 회원 유형 , 작업 유형까지 같이)
-    //     → 목록 쿼리 1번 + 전체 건수 COUNT 쿼리 1번 (Repository 의 countQuery)
-        Page<AuditEntity> auditPage = auditRepository.search(blankToNull(user), blankToNull(memberType), actionId, blankToNull(ip), result, from, pageable);
+    //  4. 사용자 검색어 → 그 검색어가 이메일 또는 이름에 들어 있는 회원 번호 목록
+    //     - 회원 이메일 · 이름은 암호화되어 DB 에서 LIKE 로 찾을 수 없음 (같은 글자도 매번 다른 암호문)
+    //       → 회원을 엔티티로 읽으면 EncryptedStringConverter 가 자동으로 복호화 → 자바에서 글자 비교
+    //     - 대소문자 구분 없이 (예전 MySQL LIKE 와 같게) : 양쪽을 소문자로 바꿔서 비교
+    //     - 검색어가 없으면 사용자 조건 없음 (userFilter = false , userIds 는 쓰지 않는 자리 채우기 [""])
+    //     - 맞는 회원이 없으면 [""] 그대로 → 회원 번호가 "" 인 회원은 없어서 결과 0건
+    //     ※ 회원 전체를 읽어서 비교하므로 회원이 수만 명이 되면 느려짐 (지금 약 200명이라 문제없음)
+    //       SELECT * FROM member  (검색어가 있을 때만)
+        String userKeyword = blankToNull(user);
+        boolean userFilter = userKeyword != null;
+        List<String> userIds = List.of("");
+        if (userFilter) {
+            String keyword = userKeyword.toLowerCase(Locale.ROOT);
+            List<String> foundIds = memberRepository.findAll().stream()
+                .filter( (memberEntity) -> {
+                    String email = memberEntity.getUserEmail() == null ? "" : memberEntity.getUserEmail().toLowerCase(Locale.ROOT);
+                    String name = memberEntity.getManagerName() == null ? "" : memberEntity.getManagerName().toLowerCase(Locale.ROOT);
+                    return email.contains(keyword) || name.contains(keyword);
+                } )
+                .map( (memberEntity) -> memberEntity.getMemberId() )
+                .toList();
+            if (!foundIds.isEmpty()) { userIds = foundIds; }
+        }
 
-    //  5. 이번 페이지의 엔티티 목록 → DTO 목록
+    //  5. 조건에 맞는 감사 로그 중 이번 페이지만 조회 (사용자 , 회원 유형 , 작업 유형까지 같이)
+    //     → 목록 쿼리 1번 + 전체 건수 COUNT 쿼리 1번 (Repository 의 countQuery)
+        Page<AuditEntity> auditPage = auditRepository.search(userFilter, userIds, blankToNull(memberType), actionId, blankToNull(ip), result, from, pageable);
+
+    //  6. 이번 페이지의 엔티티 목록 → DTO 목록
     //     getContent( ) : Page 상자 안의 "이번 페이지 목록" 만 꺼냄 (최대 50건)
         List<AuditDto> logs = auditPage.getContent().stream().map( (auditEntity) -> { return AuditDto.from(auditEntity); } ).toList();
 
-    //  6. 목록 + 페이지 숫자 → 응답 DTO 하나로 묶기 (AuthorizationService 의 사용자 목록 응답과 같은 방식)
+    //  7. 목록 + 페이지 숫자 → 응답 DTO 하나로 묶기 (AuthorizationService 의 사용자 목록 응답과 같은 방식)
     //     getNumber( )        : 지금 페이지 번호 (0 부터)
     //     getTotalPages( )    : 전체 페이지 수
     //     getTotalElements( ) : 조건에 맞는 전체 로그 수

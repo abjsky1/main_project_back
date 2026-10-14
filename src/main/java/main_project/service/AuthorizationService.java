@@ -1,10 +1,12 @@
 package main_project.service;
 
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,7 @@ import main_project.model.dto.AuthorizationCountDto;
 import main_project.model.dto.AuthorizationDto;
 import main_project.model.entity.MemberEntity;
 import main_project.model.entity.RoleEntity;
+import main_project.model.repository.AuditRepository;
 import main_project.model.repository.MemberRepository;
 import main_project.model.repository.RoleRepository;
 import main_project.util.JwtUtil;
@@ -33,6 +36,9 @@ public class AuthorizationService {
     private final MemberRepository memberRepository;
 
     private final RoleRepository roleRepository;
+
+//  회원별 최근 로그인 시각 (감사 로그의 로그인 성공 기록)
+    private final AuditRepository auditRepository;
 
     private final JwtUtil jwtUtil;
 
@@ -78,55 +84,95 @@ public class AuthorizationService {
 //  sort     : join(가입순) / login(최근 로그인순) , 그 밖의 값이면 join
 //  dir      : asc(오름차순) / desc(내림차순) , 그 밖의 값이면 desc (가입순 내림차순 = 최근 가입한 회원부터 , 기본)
 //  page     : 0 부터 (0 = 1페이지)
-//  흐름은 감사 로그 AuditService.findAll 과 같음 : 페이지 요청 만들기 → Page 조회 → DTO 로 바꾸기 → 숫자와 같이 묶기
+//
+//  [회원 이름 · 이메일 암호화 이후 바뀐 점]
+//  - 이름 · 이메일은 AES-GCM 으로 암호화되어(같은 글자도 매번 다른 암호문) DB 에서 LIKE 검색 · 정렬을 할 수 없음
+//    → 역할 · 상태 조건만 DB 에서 거르고 , 회원을 엔티티로 읽어서(자동 복호화) 검색 · 정렬 · 50명씩 자르기는 자바에서 함
+//  - 예전처럼 네이티브 쿼리로 이름 · 이메일을 바로 꺼내면 복호화가 되지 않아 화면에 암호문이 그대로 보임
+//  ※ 회원 전체를 읽어서 처리하므로 회원이 수만 명이 되면 느려짐 (지금 약 200명이라 쿼리 2번 + 자바 처리로 충분)
     @Transactional (readOnly = true)
     public AuthorizationCountDto findAll(String name, String email, String roleName, Boolean status, String sort, String dir, int page){
 
     //  1. 값 정리
     //     - 페이지 번호가 0 보다 작으면 0 (주소를 직접 고쳐서 page=-1 같은 값이 와도 오류가 나지 않게)
-    //     - 정렬 기준은 join / login , 방향은 asc / desc 만 인정 (쿼리의 CASE WHEN 이 이 글자들로 정렬을 고름)
+    //     - 정렬 기준은 join / login , 방향은 asc / desc 만 인정
     //       "login".equals(sort) : sort 가 null 이어도 오류 없이 false
         if (page < 0) { page = 0; }
         if (!"login".equals(sort)) { sort = "join"; }
         if (!"asc".equals(dir)) { dir = "desc"; }
 
-    //     - 검색어 : 빈 글자("" , "  ")는 검색 안 함(null) , 있으면 앞뒤 공백 제거
-        if (name == null || name.isBlank()) { name = null; } else { name = name.trim(); }
-        if (email == null || email.isBlank()) { email = null; } else { email = email.trim(); }
+    //     - 검색어 : 빈 글자("" , "  ")는 검색 안 함(null) , 있으면 앞뒤 공백 제거 + 소문자 (대소문자 구분 없이 — 예전 MySQL LIKE 와 같게)
+        if (name == null || name.isBlank()) { name = null; } else { name = name.trim().toLowerCase(Locale.ROOT); }
+        if (email == null || email.isBlank()) { email = null; } else { email = email.trim().toLowerCase(Locale.ROOT); }
 
-    //  2. 조건에 맞는 회원 중 이번 페이지(50명)만 조회      → 목록 쿼리 1번 + 전체 인원 COUNT 쿼리 1번
-    //     PageRequest.of( 페이지 번호 , 한 페이지 인원 ) → Pageable (Repository 에 넘기면 LIMIT / OFFSET 이 붙음)
-    //     정렬은 쿼리 안의 ORDER BY CASE WHEN 이 sort · dir 로 정해서 , 여기서는 Sort 를 넘기지 않음
-    //     MemberRow : 역할 이름 · 최근 로그인까지 쿼리가 한 번에 만들어 준 한 줄 (MemberRepository)
-        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
-        Page<MemberRepository.MemberRow> memberPage = memberRepository.searchPage(name, email, roleName, status, sort, dir, pageable);
+    //  2. 역할 · 상태 조건에 맞는 회원 전체 조회 (역할까지 JOIN FETCH 로 같이)     → 쿼리 1번
+    //     SELECT m.* , r.* FROM member m JOIN role r ... WHERE member_id NOT IN ('GUEST' , 'WITHDRAWN') AND ...
+        List<MemberEntity> memberEntities = memberRepository.searchWithRole(roleName, status);
 
-    //  3. 쿼리 결과 → 표에 들어갈 DTO 목록 (DB 가 정렬한 순서 그대로)
-    //     getContent( ) : Page 상자 안의 "이번 페이지 회원 목록" 만 꺼냄
-        List<AuthorizationDto> authorizationDtos = memberPage.getContent().stream().map((memberRow)->{
-            return AuthorizationDto.from(memberRow);
-        }).toList();
+    //  3. 회원별 최근 로그인 시각 (회원 번호 → 시각)     → 쿼리 1번
+    //     Collectors.toMap( 키 , 값 ) : 목록을 Map 으로 바꿈 → 회원마다 get( 회원 번호 ) 로 바로 꺼냄
+        Map<String, LocalDateTime> lastLogins = auditRepository.findLastLogins().stream()
+            .collect(Collectors.toMap( (lastLogin) -> lastLogin.getMemberId(), (lastLogin) -> lastLogin.getLastLoginAt() ));
 
-    //  4. 사용자 수 세기 (요약 카드는 필터와 상관없이 전체 기준)     → COUNT 쿼리 2번
+    //  4. 이름 · 이메일 검색 (복호화된 평문에서 글자가 들어 있는지)
+    //     final 변수로 옮기는 이유 : 람다( ) -> { } 안에서는 값이 바뀌지 않는 변수만 쓸 수 있음 (name · email 은 1번에서 바뀜)
+        String nameKeyword = name;
+        String emailKeyword = email;
+        List<MemberEntity> filtered = memberEntities.stream().filter( (memberEntity) -> {
+            String managerName = memberEntity.getManagerName() == null ? "" : memberEntity.getManagerName().toLowerCase(Locale.ROOT);
+            String userEmail = memberEntity.getUserEmail() == null ? "" : memberEntity.getUserEmail().toLowerCase(Locale.ROOT);
+            if (nameKeyword != null && !managerName.contains(nameKeyword)) { return false; }
+            if (emailKeyword != null && !userEmail.contains(emailKeyword)) { return false; }
+            return true;
+        } ).toList();
+
+    //  5. 정렬 기준 만들기 (예전 네이티브 쿼리의 ORDER BY 와 같은 순서)
+    //     - Comparator : "두 회원 중 누가 앞인지" 정하는 규칙 , thenComparing : 앞 기준이 같을 때 다음 기준
+    //     - 가입순       : 가입 시각 → 같으면 회원 아이디 (순서가 매번 같아야 페이지를 넘길 때 같은 회원이 두 번 나오거나 빠지지 않음)
+    //     - 최근 로그인순 : 로그인 시각 → 같으면 가입순
+    //       nullsFirst : 로그인 기록이 없는 회원(null)을 가장 작은 값으로 (MySQL 과 같게 → 오름차순이면 맨 앞 , 내림차순이면 맨 뒤)
+    //     - 내림차순이면 reversed( ) 로 전체 순서를 뒤집음 (기본 = 가입순 내림차순 = 최근 가입한 회원부터)
+        Comparator<MemberEntity> joinOrder = Comparator
+            .comparing( (MemberEntity memberEntity) -> memberEntity.getCreatedAt(), Comparator.nullsFirst(Comparator.naturalOrder()) )
+            .thenComparing( (memberEntity) -> memberEntity.getMemberId() );
+        Comparator<MemberEntity> order = joinOrder;
+        if ("login".equals(sort)) {
+            order = Comparator
+                .comparing( (MemberEntity memberEntity) -> lastLogins.get(memberEntity.getMemberId()), Comparator.nullsFirst(Comparator.naturalOrder()) )
+                .thenComparing(joinOrder);
+        }
+        if (!"asc".equals(dir)) { order = order.reversed(); }
+
+    //  6. 정렬 → 이번 페이지(50명)만 잘라서 DTO 로
+    //     skip( 앞 페이지 인원 ) → limit( 50 ) : 예) 3페이지(번호 2) → 앞의 100명을 건너뛰고 50명
+        List<AuthorizationDto> authorizationDtos = filtered.stream()
+            .sorted(order)
+            .skip((long) page * PAGE_SIZE)
+            .limit(PAGE_SIZE)
+            .map( (memberEntity) -> AuthorizationDto.from(memberEntity, lastLogins.get(memberEntity.getMemberId())) )
+            .toList();
+
+    //  7. 페이지 숫자 : 전체 인원 → 전체 페이지 수 (50명씩 , 나머지가 있으면 한 페이지 더 — 0명이면 0페이지)
+        long totalCount = filtered.size();
+        int totalPages = (int) ((totalCount + PAGE_SIZE - 1) / PAGE_SIZE);
+
+    //  8. 사용자 수 세기 (요약 카드는 필터와 상관없이 전체 기준)     → COUNT 쿼리 2번
         int allUser = (int) memberRepository.countByMemberIdNotIn(SYSTEM_MEMBER_IDS);
 
         int activate = (int) memberRepository.countByStatusAndMemberIdNotIn(true, SYSTEM_MEMBER_IDS);
 
         int deactivate = allUser - activate;
 
-    //  5. 사용자 수 + 이번 페이지 목록 + 페이지 숫자 → 응답 DTO 하나로 묶기
-    //     getNumber( )        : 지금 페이지 번호 (0 부터)
-    //     getTotalPages( )    : 전체 페이지 수
-    //     getTotalElements( ) : 필터에 맞는 전체 인원
+    //  9. 사용자 수 + 이번 페이지 목록 + 페이지 숫자 → 응답 DTO 하나로 묶기 (응답 모양은 예전과 같음 — 화면은 고칠 것 없음)
         AuthorizationCountDto result = AuthorizationCountDto.builder()
             .allUser(allUser)
             .activate(activate)
             .deactivate(deactivate)
             .members(authorizationDtos)
-            .page(memberPage.getNumber())
+            .page(page)
             .size(PAGE_SIZE)
-            .totalPages(memberPage.getTotalPages())
-            .totalCount(memberPage.getTotalElements())
+            .totalPages(totalPages)
+            .totalCount(totalCount)
             .build();
 
         return result;
