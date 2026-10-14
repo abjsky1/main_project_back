@@ -8,7 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import main_project.model.entity.MemberEntity;
+import main_project.model.repository.MemberRepository;
 
 @AllArgsConstructor 
 @NoArgsConstructor 
@@ -16,7 +16,7 @@ import main_project.model.entity.MemberEntity;
 @Builder 
 public class AuthorizationDto {
 
-//  회원 번호
+//  회원 아이디 (UUID)
     private String memberId;
 
 //  회원 이름
@@ -41,15 +41,16 @@ public class AuthorizationDto {
 //  조회 전용 DTO 라서 toEntity() 는 만들지 않음.
 //  (비밀번호, 사업자번호 등 필수값이 없어서 MemberEntity 를 만들 수도 없음)
 
-//  최근 로그인 시간은 MemberEntity 안에 없으니까 매개변수로 따로 받음
-    public static AuthorizationDto from(MemberEntity memberEntity , LocalDateTime lastLoginAt){
+//  사용자 목록 쿼리 결과 한 줄(MemberRow) → 화면으로 보낼 DTO
+//  역할 이름 · 최근 로그인까지 쿼리가 한 번에 만들어 주므로 그대로 옮겨 담기만 함
+    public static AuthorizationDto from(MemberRepository.MemberRow memberRow){
         return AuthorizationDto.builder()
-            .memberId(memberEntity.getMemberId())
-            .managerName(memberEntity.getManagerName())
-            .userEmail(memberEntity.getUserEmail())
-            .roleName(memberEntity.getRoleEntity().getRoleName())   // ※ RoleEntity 실제 필드명으로 바꿔줘
-            .status(memberEntity.getStatus())
-            .lastLoginAt(lastLoginAt)
+            .memberId(memberRow.getMemberId())
+            .managerName(memberRow.getManagerName())
+            .userEmail(memberRow.getUserEmail())
+            .roleName(memberRow.getRoleName())
+            .status(memberRow.getStatus())
+            .lastLoginAt(memberRow.getLastLoginAt())   // 로그인 기록이 없으면 null
             .build();
     }
 

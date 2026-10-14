@@ -11,11 +11,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.ModelAttribute;
 
 import lombok.RequiredArgsConstructor;
 
 import main_project.model.dto.MatchingDto;
 import main_project.model.dto.MatchingPageDto;
+import main_project.model.dto.MatchingSearchDto;
 import main_project.model.entity.MatchingEntity;
 import main_project.model.repository.MatchingRepository;
 import main_project.service.MatchingService;
@@ -65,23 +67,26 @@ public class MatchingController {
     }
 
     // [1-1] 관리자 매칭 관리 화면 — 상태별 건수 5개 + 고른 상태의 매칭 한 페이지(50건)를 한 번에
-    //  예) GET /api/matching/admin?status=completed&page=0
-    //  - status : all(전체) / linked(자동 매칭 연결) / requested(물류 수락 대기) / completed(성사) / failed(실패) , 안 보내면 all
-    //  - page   : 몇 번째 페이지 (0 부터 — 0 = 1페이지) , 안 보내면 0
-    //             defaultValue : 값이 안 오면 쓸 기본값 (springweb day039 RestController2 와 같은 방식)
+    //  예) GET /api/matching/admin?status=completed&keyword=로지스&reason=선복&transportType=true&regularRoute=false&sort=score&dir=desc&page=0
+    //  - 조건이 많아서 @ModelAttribute 로 DTO 하나에 받음 (주소의 ?이름=값 → MatchingSearchDto 의 같은 이름 필드)
+    //      status        : all / linked / requested / completed / failed , 안 보내면 all
+    //      keyword       : 화주사 · 운송사 회사 이름 검색어 , reason : 추천 이유 · 주의 사항 검색어 , 안 보내면 전체
+    //      transportType : true(해상) / false(항공) , regularRoute · directRoute : true(O) / false(X) , 안 보내면 전체
+    //      sort          : id(매칭 ID 순) / score(매칭 점수순) , dir : asc / desc , 안 보내면 매칭 ID 내림차순(최신순)
+    //      page          : 몇 번째 페이지 (0 부터 — 0 = 1페이지) , 안 보내면 0
+    //      (무역 데이터 조건 검색 SearchController 의 @ModelAttribute SearchDto 와 같은 방식)
     //  - 관리자가 아니면 null (화면은 "관리자만 볼 수 있습니다")
     //  (예전에 상태마다 따로 있던 /recommended , /shipper-requested , /completed , /failed 4개를 이 주소 하나로 합침)
     @GetMapping("/admin")
     public MatchingPageDto matchingAdminRead(
-            @RequestParam(name = "status", required = false, defaultValue = "all") String status,
-            @RequestParam(name = "page", required = false, defaultValue = "0") int page,
+            @ModelAttribute MatchingSearchDto matchingSearchDto,
             @CookieValue(value = "AccessToken", required = false) String accessToken) {
 
         // 1. 관리자 권한 확인 (아니면 null)
         if (!adminCheck(accessToken)) {return null;}
 
-        // 2. 관리자라면 상태별 건수 + 그 상태의 한 페이지 조회
-        return matchingService.matchingAdminRead(status, page);
+        // 2. 관리자라면 상태별 건수 + 그 상태의 한 페이지 조회 (검색 · 정렬 조건 포함)
+        return matchingService.matchingAdminRead(matchingSearchDto);
 
     }
 

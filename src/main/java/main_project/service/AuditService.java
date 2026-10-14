@@ -11,6 +11,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import main_project.audit.AuditTargets;
 import main_project.model.dto.AuditDto;
+import main_project.model.dto.ActionDto;
 import main_project.model.dto.AuditPageDto;
 import main_project.model.dto.AuditSaveDto;
 import main_project.model.entity.ActionEntity;
@@ -57,12 +59,13 @@ public class AuditService {
 
 
 //  감사 로그 목록 조회 — 한 페이지(50건)씩 (필터 조건 + 최신순)
-//  user   : 이메일/이름 검색어 , action : 작업 유형 검색어 , result : 성공(true)/실패(false) , 비어 있으면 조건 없음
+//  user   : 이메일/이름 검색어 , memberType : 회원 유형(선택칸) , actionId : 작업 유형 번호(선택칸)
+//  ip     : IP 주소 검색어 , result : 성공(true)/실패(false) — 비어 있으면 조건 없음
 //  period : 기간 (today / 7days / 30days / 6months / 1year , 그 밖의 값이나 null 이면 전체 기간)
 //  page   : 몇 번째 페이지 (0 부터 — 0 = 1페이지)
 //  돌려주는 것 : 이번 페이지 로그 + 페이지 버튼에 필요한 숫자 (AuditPageDto)
     @Transactional (readOnly = true)
-    public AuditPageDto findAll(String user, String action, Boolean result, String period, int page){
+    public AuditPageDto findAll(String user, String memberType, Integer actionId, String ip, Boolean result, String period, int page){
 
     //  1. 페이지 번호 정리 : 0 보다 작으면 0 (주소를 직접 고쳐서 page=-1 같은 값이 와도 오류가 나지 않게)
         if (page < 0) { page = 0; }
@@ -85,7 +88,7 @@ public class AuditService {
 
     //  4. 조건에 맞는 감사 로그 중 이번 페이지만 조회 (사용자 , 회원 유형 , 작업 유형까지 같이)
     //     → 목록 쿼리 1번 + 전체 건수 COUNT 쿼리 1번 (Repository 의 countQuery)
-        Page<AuditEntity> auditPage = auditRepository.search(blankToNull(user), blankToNull(action), result, from, pageable);
+        Page<AuditEntity> auditPage = auditRepository.search(blankToNull(user), blankToNull(memberType), actionId, blankToNull(ip), result, from, pageable);
 
     //  5. 이번 페이지의 엔티티 목록 → DTO 목록
     //     getContent( ) : Page 상자 안의 "이번 페이지 목록" 만 꺼냄 (최대 50건)
@@ -102,6 +105,16 @@ public class AuditService {
             .totalPages(auditPage.getTotalPages())
             .totalCount(auditPage.getTotalElements())
             .build();
+    }
+
+
+//  작업 유형 목록 (감사 로그 필터 줄의 "작업 유형" 선택칸) — action 테이블 전체를 번호순으로
+//  Sort.by("actionId") : 작업 유형 번호(1 , 2 , 3 ...) 순서 , 엔티티 → DTO 로 바꿔서 돌려줌
+    @Transactional (readOnly = true)
+    public List<ActionDto> findActions(){
+        return actionRepository.findAll(Sort.by("actionId")).stream().map((actionEntity) -> {
+            return ActionDto.from(actionEntity);
+        }).toList();
     }
 
 
