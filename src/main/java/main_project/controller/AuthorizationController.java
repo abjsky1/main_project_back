@@ -23,21 +23,25 @@ public class AuthorizationController {
 
     private final AuthorizationService authorizationService;
 
-    //  사용자 권한 관리 사용자 목록 조회 (필터 조건은 선택)
-    //  예) /api/authorization?roleName=ROLE_ADMIN&status=true
+    //  사용자 권한 관리 사용자 목록 조회 — 한 페이지(50명)씩 (필터 · 정렬 조건은 선택)
+    //  예) /api/authorization?roleName=ROLE_ADMIN&status=true&loginSort=desc&page=1   (page 는 0 부터 → 1 = 2페이지)
+    //  loginSort : asc / desc (최근 로그인 정렬) , 없으면 정렬 없음
+    //  page      : 없으면 0 (첫 페이지) — defaultValue 가 있어서 int 로 받아도 비어 있을 때 오류가 나지 않음
     //  @CookieValue : 로그인할 때 받은 출입증(AccessToken) 쿠키 (없으면 null)
     @GetMapping ("")
     public AuthorizationCountDto findAll(
             @RequestParam (name = "roleName", required = false) String roleName,
             @RequestParam (name = "status", required = false) Boolean status,
+            @RequestParam (name = "loginSort", required = false) String loginSort,
+            @RequestParam (name = "page", required = false, defaultValue = "0") int page,
             @CookieValue (name = "AccessToken", required = false) String accessToken){
 
         // 1. 관리자인지 확인 (아니면 목록을 주지 않음)
         String adminId = authorizationService.getLoginAdminId(accessToken);
         if (adminId == null) { return null; }
 
-        // 2. 관리자면 목록 조회
-        return authorizationService.findAll(roleName, status);
+        // 2. 관리자면 그 페이지 목록 조회
+        return authorizationService.findAll(roleName, status, loginSort, page);
     }
 
     //  권한 변경 스위치 (관리자 ↔ 일반 사용자)

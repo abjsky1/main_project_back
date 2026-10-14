@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +30,9 @@ public class AuthorizationService {
 
 //  실제 회원이 아닌 감사 로그용 공통 계정 (사용자 목록 · 사용자 수 · 권한 변경에서 제외)
     private static final List<String> SYSTEM_MEMBER_IDS = List.of(AuditService.GUEST_MEMBER_ID, AuditService.WITHDRAWN_MEMBER_ID);
+
+//  사용자 목록 한 페이지에 보여 줄 인원 (감사 로그 · 매칭 관리와 같은 50)
+    private static final int PAGE_SIZE = 50;
 
     private final MemberRepository memberRepository;
 
@@ -69,23 +75,42 @@ public class AuthorizationService {
     }
 
 
-//  사용자 권한 관리 사용자 목록 조회 (필터 조건으로 DB 에서 조회)
-//  roleName : ROLE_ADMIN / ROLE_USER , status : true(활성) / false(비활성) , null 이면 조건 없음
+//  사용자 권한 관리 사용자 목록 조회 — 한 페이지씩 (필터 조건 + 최근 로그인 정렬로 DB 에서 조회)
+//  roleName  : ROLE_ADMIN / ROLE_USER , status : true(활성) / false(비활성) , null 이면 조건 없음
+//  loginSort : asc(로그인한 지 오래된 사람부터) / desc(최근 로그인한 사람부터) , 그 밖의 값이면 정렬 없음(최근 가입순)
+//  page      : 0 부터 (0 = 1페이지)
+//  흐름은 감사 로그 AuditService.findAll 과 같음 : 페이지 요청 만들기 → Page 조회 → DTO 로 바꾸기 → 숫자와 같이 묶기
     @Transactional (readOnly = true)
-    public AuthorizationCountDto findAll(String roleName, Boolean status){
+    public AuthorizationCountDto findAll(String roleName, Boolean status, String loginSort, int page){
 
-    //  1. 조건에 맞는 회원 조회 (역할까지 같이)                    → 쿼리 1번
-        List<MemberEntity> memberEntities = memberRepository.searchWithRole(roleName, status);
+    //  1. 값 정리
+    //     - 페이지 번호가 0 보다 작으면 0 (주소를 직접 고쳐서 page=-1 같은 값이 와도 오류가 나지 않게)
+    //     - 정렬은 asc / desc 만 인정 , 나머지(null 포함)는 null = 정렬 없음
+    //       "asc".equals(loginSort) : loginSort 가 null 이어도 오류 없이 false
+        if (page < 0) { page = 0; }
+        if (!"asc".equals(loginSort) && !"desc".equals(loginSort)) { loginSort = null; }
 
-    //  2. 회원별 최근 로그인 시간 조회                          → 쿼리 1번
+    //  2. 조건에 맞는 회원 중 이번 페이지(50명)만 조회      → 목록 쿼리 1번 + 전체 인원 COUNT 쿼리 1번
+    //     PageRequest.of( 페이지 번호 , 한 페이지 인원 ) → Pageable (Repository 에 넘기면 LIMIT / OFFSET 이 붙음)
+        Pageable pageable = PageRequest.of(page, PAGE_SIZE);
+        Page<MemberEntity> memberPage = memberRepository.searchPage(roleName, status, loginSort, pageable);
+
+    //  3. 이번 페이지 회원들의 최근 로그인 시간 조회        → 쿼리 1번
+    //     getContent( ) : Page 상자 안의 "이번 페이지 회원 목록" 만 꺼냄
+    //     회원 번호만 뽑아서 넘김 → 전체 회원이 아니라 이 50명의 로그인 시간만 셈
+    //     (이번 페이지가 비어 있으면 물어볼 회원이 없어서 조회하지 않음 — 빈 목록으로 IN ( ) 쿼리를 만들지 않게)
+        List<String> memberIds = memberPage.getContent().stream().map((memberEntity) -> memberEntity.getMemberId()).toList();
+
         Map<String, LocalDateTime> lastLoginMap = new HashMap<>();
 
-        auditRepository.findLastLoginList().forEach((lastLogin)->{
-            lastLoginMap.put(lastLogin.getMemberId(), lastLogin.getLastLoginAt());
-        });
+        if (!memberIds.isEmpty()) {
+            auditRepository.findLastLoginList(memberIds).forEach((lastLogin)->{
+                lastLoginMap.put(lastLogin.getMemberId(), lastLogin.getLastLoginAt());
+            });
+        }
 
-    //  3. 회원 + 최근 로그인 시간 → 표에 들어갈 DTO 목록
-        List<AuthorizationDto> authorizationDtos = memberEntities.stream().map((memberEntity)->{
+    //  4. 회원 + 최근 로그인 시간 → 표에 들어갈 DTO 목록 (DB 가 정렬한 순서 그대로)
+        List<AuthorizationDto> authorizationDtos = memberPage.getContent().stream().map((memberEntity)->{
 
             LocalDateTime lastLoginAt = lastLoginMap.get(memberEntity.getMemberId());   // 로그인 기록이 없으면 null
 
@@ -93,19 +118,26 @@ public class AuthorizationService {
 
         }).toList();
 
-    //  4. 사용자 수 세기 (요약 카드는 필터와 상관없이 전체 기준)     → COUNT 쿼리 2번
+    //  5. 사용자 수 세기 (요약 카드는 필터와 상관없이 전체 기준)     → COUNT 쿼리 2번
         int allUser = (int) memberRepository.countByMemberIdNotIn(SYSTEM_MEMBER_IDS);
 
         int activate = (int) memberRepository.countByStatusAndMemberIdNotIn(true, SYSTEM_MEMBER_IDS);
 
         int deactivate = allUser - activate;
 
-    //  5. 사용자 수 + 목록 → 응답 DTO 하나로 묶기
+    //  6. 사용자 수 + 이번 페이지 목록 + 페이지 숫자 → 응답 DTO 하나로 묶기
+    //     getNumber( )        : 지금 페이지 번호 (0 부터)
+    //     getTotalPages( )    : 전체 페이지 수
+    //     getTotalElements( ) : 필터에 맞는 전체 인원
         AuthorizationCountDto result = AuthorizationCountDto.builder()
             .allUser(allUser)
             .activate(activate)
             .deactivate(deactivate)
             .members(authorizationDtos)
+            .page(memberPage.getNumber())
+            .size(PAGE_SIZE)
+            .totalPages(memberPage.getTotalPages())
+            .totalCount(memberPage.getTotalElements())
             .build();
 
         return result;

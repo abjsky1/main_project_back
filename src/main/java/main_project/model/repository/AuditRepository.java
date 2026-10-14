@@ -26,23 +26,23 @@ public interface AuditRepository extends JpaRepository<AuditEntity,Integer>{
         LocalDateTime getLastLoginAt();
     }
 
-//  회원별 최근 로그인 성공 시간 한 번에 조회
+//  회원별 최근 로그인 성공 시간 한 번에 조회 — 사용자 목록의 "이번 페이지 회원들" 만
 //  action_id = 2 (로그인) , action_result = true (성공) 인 로그만 남기고
 //  member_id 별로 묶어서(GROUP BY) 그 중 가장 늦은 시간(MAX)을 가져옴.
-//  → 회원이 100명이어도 쿼리는 딱 1번.
+//  → 회원이 50명이어도 쿼리는 딱 1번.
+//  memberIds : 이번 페이지 회원 번호 목록 (IN : 목록 안에 있는 회원만 — 전체 회원의 로그인 시간을 다 셀 필요 없음)
 //
 //  nativeQuery 가 아닌 JPQL : 테이블명 대신 엔티티명(AuditEntity) , 컬럼명 대신 필드명(createdAt) 을 씀.
 //  엔티티 필드 타입 그대로 LocalDateTime 으로 받아와서 형변환 걱정이 없음.
 //  (네이티브 쿼리로 치면 아래와 같음)
 //  SELECT member_id AS memberId, MAX(created_at) AS lastLoginAt FROM audit
-//  WHERE action_id = 2 AND action_result = true GROUP BY member_id
+//  WHERE action_id = 2 AND action_result = true AND member_id IN ( ? , ? , ... ) GROUP BY member_id
     @Query("SELECT a.memberEntity.memberId AS memberId, MAX(a.createdAt) AS lastLoginAt " +
            "FROM AuditEntity a " +
            "WHERE a.actionEntity.actionId = 2 AND a.actionResult = true " +
+           "AND a.memberEntity.memberId IN :memberIds " +
            "GROUP BY a.memberEntity.memberId")
-
-//  @Query("SELECT member_id AS memberId, MAX(created_at) AS lastLoginAt FROM audit WHERE action_id = 2 AND action_result = true GROUP BY member_id", nativeQuery = true )
-    List<LastLogin> findLastLoginList();
+    List<LastLogin> findLastLoginList(@Param("memberIds") List<String> memberIds);
 
 //  감사 로그 목록 조회 — 한 페이지씩 (필터 조건 + 최신순) + 사용자 , 회원 유형 , 작업 유형까지 한 번에
 //  - user   : 이메일 또는 이름에 포함된 글자 (비회원은 이름이 '비회원')
