@@ -5,6 +5,7 @@ import java.util.List;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 
@@ -19,6 +20,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import main_project.util.EncryptedStringConverter;
 
 
 @Entity
@@ -37,7 +39,15 @@ public class MemberEntity extends BaseTime {
     @JoinColumn(name = "signup_id", nullable = false)
     private SignupEntity signupEntity;
 
-    @Column(name = "user_email", nullable = false, length = 100, unique = true)
+//  ---------- 개인정보 암호화 (이메일 · 담당자 이름 · 사업자번호 · 전화번호) ----------
+//  - @Convert : DB에 저장할 때 AES-256-GCM 암호화, 읽을 때 자동 복호화 → 자바 코드에서는 평문으로 보임
+//  - DB 저장 모양 : "v1:" + Base64( IV 12바이트 + 암호문 + 태그 16바이트 )
+//  - 컬럼 길이 = 3 + ceil( (28 + 평문 바이트) / 3 ) * 4  (평문은 한 글자 최대 4바이트로 계산)
+//      이메일 100자 → 575 → 600 , 이름 50자 → 307 → 320 , 사업자번호 12자 → 107 → 120 , 전화번호 20자 → 147 → 160
+//  - 암호문은 같은 값이라도 매번 달라서 unique · 검색이 안 됨 → 이메일 · 사업자번호는 아래 *_hash 칸으로 중복확인 · 검색
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "user_email", nullable = false, length = 600)
     private String userEmail;
 
     @Column(name = "user_password", nullable = false, length = 255)
@@ -46,14 +56,28 @@ public class MemberEntity extends BaseTime {
     @Column(name = "company_name", nullable = false, length = 100)
     private String companyName;
 
-    @Column(name = "manager_name", nullable = false, length = 50)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "manager_name", nullable = false, length = 320)
     private String managerName;
 
-    @Column(name = "business_reg_no", nullable = false, length = 12, unique = true)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "business_reg_no", nullable = false, length = 120)
     private String businessRegNo;
 
-    @Column(name = "user_phone", nullable = false, length = 20)
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "user_phone", nullable = false, length = 160)
     private String userPhone;
+
+//  ---------- 검색 · 중복확인용 HMAC-SHA-256 값 (16진수 64글자) ----------
+//  - 정규화(PiiNormalizer)한 값을 HmacUtil로 만든 값. 같은 입력이면 항상 같은 값 → WHERE · unique 가능
+//  - nullable : 샘플 SQL은 평문 회원만 넣고, MemberPiiMigrationRunner가 서버 시작 후 채운다
+//  - 이름 · 전화번호는 검색값을 만들지 않음 (이름은 동명이인이 있어 unique 불가)
+
+    @Column(name = "user_email_hash", length = 64, unique = true)
+    private String userEmailHash;
+
+    @Column(name = "business_reg_no_hash", length = 64, unique = true)
+    private String businessRegNoHash;
 
     @Column(name = "company_address", nullable = false, length = 300)
     private String companyAddress;
