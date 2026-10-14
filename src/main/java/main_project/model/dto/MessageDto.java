@@ -1,6 +1,7 @@
 package main_project.model.dto;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -72,6 +73,36 @@ public class MessageDto {
             .content(messageEntity.getContent())
             .createdAt(messageEntity.getCreatedAt())
             .roomStatus(messageEntity.getRoomEntity().getStatus())   // 방의 지금 상태 (같은 방 메시지들은 방을 한 번만 조회)
+            .build();
+    }
+
+
+//  DTO → Redis Stream 한 줄 (ChatService ⑨ 가 XADD 할 때)
+//  - Stream 한 줄은 "이름 : 글자" 묶음이라 숫자 · 시각 · enum 을 모두 글자로 바꿔서 넣음
+//  - roomStatus 는 넣지 않음 (보낼 때의 방 상태일 뿐 , 메시지 기록이 아님 — DB 에도 없는 칸)
+    public Map<String, String> toStreamFields(){
+        return Map.of(
+            "messageId", String.valueOf(messageId),
+            "roomId", String.valueOf(roomId),
+            "senderType", senderType.name(),                // "MEMBER" / "ADMIN" / "SYSTEM"
+            "senderName", senderName,
+            "content", content,
+            "createdAt", createdAt.toString());             // "2026-10-15T14:05:30.123456"
+    }
+
+
+//  Redis Stream 한 줄 → DTO (메시지 목록 · DB 로 옮기기 · 마지막 메시지에서 사용)
+//  - toStreamFields 로 넣은 글자를 원래 종류로 되돌림 (Integer.valueOf , SenderType.valueOf , LocalDateTime.parse)
+//  - roomStatus 는 Stream 에 없어서 비워 둠 → 필요한 곳(메시지 목록)에서 방의 지금 상태를 넣음
+//  - Map<Object, Object> : Redis 에서 읽은 값은 종류를 몰라서 Object 로 옴 → toString( ) 으로 글자로
+    public static MessageDto fromStream(Map<Object, Object> fields){
+        return MessageDto.builder()
+            .messageId(Integer.valueOf(fields.get("messageId").toString()))
+            .roomId(Integer.valueOf(fields.get("roomId").toString()))
+            .senderType(SenderType.valueOf(fields.get("senderType").toString()))
+            .senderName(fields.get("senderName").toString())
+            .content(fields.get("content").toString())
+            .createdAt(LocalDateTime.parse(fields.get("createdAt").toString()))
             .build();
     }
 

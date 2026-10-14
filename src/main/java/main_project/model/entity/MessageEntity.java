@@ -2,17 +2,11 @@ package main_project.model.entity;
 
 import java.time.LocalDateTime;
 
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -34,6 +28,10 @@ import lombok.NoArgsConstructor;
 //
 //  ※ 감사 로그(AuditEntity)처럼 "기록" 이라서 한 번 저장하면 고치지 않음
 //    → BaseTime 대신 created_at 만 두고 updatable = false
+//
+//  ※ 저장은 JPA(save)가 아니라 ChatService ⑬ 이 여러 개를 모아서 INSERT 1번으로 함 (Redis Stream → DB)
+//    → 이 엔티티는 "읽기" 에만 씀 (메시지 목록 · 마지막 메시지 · 안 읽음 수)
+//    → 그래서 번호 · 시각을 DB 나 JPA 가 정하지 않고 , 메시지를 받은 순간 ChatService 가 정해서 넣음
 //  =====================================================================
 @Entity
 @Table(name = "message")
@@ -41,12 +39,13 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EntityListeners(AuditingEntityListener.class)   // @CreatedDate 가 동작하도록 JPA 자동 기록 기능 연결 (BaseTime 에 붙어 있는 것과 같음)
 public class MessageEntity {
 
-    // 메시지 번호 (PK , 자동 증가) → 번호가 작을수록 먼저 보낸 메시지
+    // 메시지 번호 (PK) → 번호가 작을수록 먼저 보낸 메시지
+    //  - 자동 증가(@GeneratedValue)가 아님 : Redis 번호표(INCR chat:msg:seq)가 메시지를 받는 순간 1 , 2 , 3 ... 을 줌
+    //    (DB 에 넣기 몇 초 전부터 화면에 번호가 필요해서 — 프론트가 이 번호로 중복을 거르고 순서를 정함)
+    //  - PK 라서 같은 번호는 두 번 들어가지 않음 → 옮기다 서버가 꺼져서 다시 옮겨도 중복 저장 없음 (INSERT IGNORE)
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "message_id")
     private Integer messageId;
 
@@ -82,9 +81,9 @@ public class MessageEntity {
     @Column(name = "content", nullable = false, length = 1000)
     private String content;
 
-    // 보낸 시각 (저장될 때 JPA 가 자동으로 현재 시각을 넣어 줌)
+    // 보낸 시각 (서버가 메시지를 받은 순간 — ChatService 가 정함)
+    //  - DB 에 들어간 시각이 아님 (몇 초 늦게 들어가도 보낸 시각은 그대로 → 이번 상담 · 안 읽음 계산이 틀어지지 않음)
     //  - updatable = false : 한 번 저장된 뒤에는 UPDATE 문에 포함되지 않음 → 보낸 시각이 바뀔 일 없음
-    @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
