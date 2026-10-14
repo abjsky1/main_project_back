@@ -2,6 +2,7 @@ package main_project.service;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,6 +22,7 @@ import main_project.model.entity.Cscore1Entity;
 import main_project.model.entity.Cscore2Entity;
 import main_project.model.entity.Lscore1Entity;
 import main_project.model.entity.Lscore2Entity;
+import reactor.util.retry.Retry;
 
 
 @Service 
@@ -112,7 +115,11 @@ public class MatchingAiService {
                 .bodyValue(requestBody)
                 .retrieve()
                 .bodyToMono(String.class)
-                .block();
+                 // 연결 오류가 발생하면 2초 후 한 번 재시도
+                .retryWhen(Retry.backoff(1, Duration.ofSeconds(2))
+                                .filter(e -> e instanceof WebClientRequestException))
+                // 전체 응답 대기 최대 90초
+                .block(Duration.ofSeconds(90));
 
             // 3. 응답 JSON 변혼
             JsonNode json = objectMapper.readTree(response);
@@ -136,12 +143,11 @@ public class MatchingAiService {
 
             } catch (Exception e) {
 
-                System.out.println("Gemini API 호출 오류 : " + e);
+                System.out.println("Gemini 평가 오류 : " + e.getMessage());
                 e.printStackTrace();
 
+                return null;
             }
-
-        return null;
 
     }
 
