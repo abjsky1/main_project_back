@@ -17,7 +17,9 @@ import lombok.RequiredArgsConstructor;
 import main_project.model.dto.MemberDto;
 import main_project.model.entity.MemberEntity;
 import main_project.model.repository.MemberRepository;
+import main_project.util.HmacUtil;
 import main_project.util.JwtUtil;
+import main_project.util.PiiNormalizer;
 
 //  =====================================================================
 //  감사 로그 도우미 ① : 요청(HttpServletRequest)에서 필요한 정보 꺼내기
@@ -39,6 +41,7 @@ public class AuditRequestReader {
 
     private final MemberRepository memberRepository;   // 이메일로 회원 찾기
     private final JwtUtil jwtUtil;                     // 출입증(JWT)에서 회원 번호 읽기
+    private final HmacUtil hmacUtil;                   // 이메일 → 검색값 (이메일 칸은 암호화되어 있어서 검색값으로 찾음)
 
 
 //  ---------------------------------------------------------------------
@@ -207,9 +210,12 @@ public class AuditRequestReader {
         }
 
     //  ③ 쿠키가 없을 때 : 요청 body 의 userEmail 로 회원 찾기 (로그인 실패 , 회원 가입)
+    //     user_email 칸은 암호화되어(같은 이메일도 매번 다른 암호문) "WHERE user_email = ?" 로는 찾을 수 없음
+    //     → LoginService 와 같은 방법 : 정규화(공백 제거 + 소문자) → HMAC 검색값 → user_email_hash 로 조회
         Object userEmail = readField(args, "userEmail");
-        if (userEmail != null) {
-            MemberEntity memberEntity = memberRepository.findByUserEmail(userEmail.toString()).orElse(null);
+        String normalizedEmail = (userEmail == null) ? null : PiiNormalizer.normalizeEmail(userEmail.toString());
+        if (normalizedEmail != null && !normalizedEmail.isEmpty()) {
+            MemberEntity memberEntity = memberRepository.findByUserEmailHash(hmacUtil.hash(normalizedEmail)).orElse(null);
             if (memberEntity != null) {
                 return memberEntity.getMemberId();
             }

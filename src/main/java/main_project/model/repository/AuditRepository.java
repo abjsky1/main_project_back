@@ -1,6 +1,7 @@
 package main_project.model.repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,12 +17,30 @@ import main_project.model.entity.AuditEntity;
 @Repository 
 public interface AuditRepository extends JpaRepository<AuditEntity,Integer>{
 
-//  ※ 회원별 최근 로그인 시간(예전 findLastLoginList)은 사용자 목록 쿼리(MemberRepository.searchPage)가 직접 계산함
-//    → 최근 로그인순으로 정렬하려면 페이지를 나누기 전에 DB 에서 같이 계산해야 해서 그쪽으로 옮김
+//  [회원별 최근 로그인 시각 한 줄] — 아래 findLastLogins 쿼리의 결과
+//  - getter 이름 = 쿼리의 AS 별칭 → Spring 이 알아서 값을 채워 줌 (MatchingRepository 의 StatusCount 와 같은 방식)
+    interface LastLogin {
+        String getMemberId();
+        LocalDateTime getLastLoginAt();
+    }
+
+//  회원별 최근 로그인 시각 — 사용자 권한 관리 목록(AuthorizationService.findAll)의 "최근 로그인" 칸 · 정렬에 사용
+//  - 로그인 성공(action_id = 2 , action_result = true) 기록만 회원별로 묶어서(GROUP BY) 가장 늦은 시각(MAX)
+//  - 로그인 기록이 없는 회원은 결과에 없음 → 서비스에서 null 로 처리
+//  - 예전에는 사용자 목록 네이티브 쿼리 안에서 같이 계산했지만 , 회원 이름 · 이메일이 암호화되면서
+//    목록을 엔티티로 읽게 바뀌어(엔티티로 읽어야 자동 복호화됨) 따로 한 번에 조회함 → 쿼리 1번
+//  SELECT member_id , MAX(created_at) FROM audit WHERE action_id = 2 AND action_result = true GROUP BY member_id
+    @Query("SELECT a.memberEntity.memberId AS memberId, MAX(a.createdAt) AS lastLoginAt FROM AuditEntity a " +
+           "WHERE a.actionEntity.actionId = 2 AND a.actionResult = true " +
+           "GROUP BY a.memberEntity.memberId")
+    List<LastLogin> findLastLogins();
 
 //  감사 로그 목록 조회 — 한 페이지씩 (필터 조건 + 최신순) + 사용자 , 회원 유형 , 작업 유형까지 한 번에
 //  (화면에서는 각 조건이 표의 해당 컬럼 바로 위 필터 줄에 있음)
-//  - user       : 이메일 또는 이름에 포함된 글자 (비회원은 이름이 '비회원')
+//  - userFilter / userIds : 사용자 검색 (이메일 또는 이름에 검색어가 들어 있는 회원의 번호 목록)
+//      회원 이메일 · 이름은 암호화되어(같은 글자도 매번 다른 암호문) DB 에서 LIKE 로 찾을 수 없음
+//      → AuditService 가 회원을 복호화해서 자바에서 먼저 찾고 , 그 회원 번호들로 거름 (비회원은 이름이 '비회원')
+//      userFilter = false 면 사용자 조건 없음 (이때 userIds 는 쓰지 않지만 IN 에 빈 목록을 넣을 수 없어서 [""] 를 넣음)
 //  - memberType : 회원 유형 이름 (관리자 / 수출입기업 / 물류운송업체 / 비회원 — signup 테이블의 signup_type 과 정확히 같은 것만)
 //  - actionId   : 작업 유형 번호 (선택칸에서 고른 action_id — 이름 글자 검색이 아니라 번호가 정확히 같은 것만)
 //  - ip         : 접속 IP 주소에 포함된 글자 (예: '203.0' → 203.0 으로 시작하거나 중간에 들어 있는 IP)
@@ -47,7 +66,7 @@ public interface AuditRepository extends JpaRepository<AuditEntity,Integer>{
                    "JOIN FETCH a.memberEntity m " +
                    "JOIN FETCH m.signupEntity s " +
                    "JOIN FETCH a.actionEntity t " +
-                   "WHERE (:user IS NULL OR m.userEmail LIKE CONCAT('%', :user, '%') OR m.managerName LIKE CONCAT('%', :user, '%')) " +
+                   "WHERE (:userFilter = false OR m.memberId IN :userIds) " +
                    "AND (:memberType IS NULL OR s.signupType = :memberType) " +
                    "AND (:actionId IS NULL OR t.actionId = :actionId) " +
                    "AND (:ip IS NULL OR a.fipAddress LIKE CONCAT('%', :ip, '%')) " +
@@ -58,13 +77,13 @@ public interface AuditRepository extends JpaRepository<AuditEntity,Integer>{
                         "JOIN a.memberEntity m " +
                         "JOIN m.signupEntity s " +
                         "JOIN a.actionEntity t " +
-                        "WHERE (:user IS NULL OR m.userEmail LIKE CONCAT('%', :user, '%') OR m.managerName LIKE CONCAT('%', :user, '%')) " +
+                        "WHERE (:userFilter = false OR m.memberId IN :userIds) " +
                         "AND (:memberType IS NULL OR s.signupType = :memberType) " +
                         "AND (:actionId IS NULL OR t.actionId = :actionId) " +
                         "AND (:ip IS NULL OR a.fipAddress LIKE CONCAT('%', :ip, '%')) " +
                         "AND (:result IS NULL OR a.actionResult = :result) " +
                         "AND (:from IS NULL OR a.createdAt >= :from)")
-    Page<AuditEntity> search(@Param("user") String user, @Param("memberType") String memberType,
+    Page<AuditEntity> search(@Param("userFilter") boolean userFilter, @Param("userIds") List<String> userIds, @Param("memberType") String memberType,
                              @Param("actionId") Integer actionId, @Param("ip") String ip, @Param("result") Boolean result,
                              @Param("from") LocalDateTime from, Pageable pageable);
 
