@@ -18,6 +18,7 @@ import main_project.model.dto.RoomDto;
 import main_project.model.entity.MemberEntity;
 import main_project.model.entity.MessageEntity;
 import main_project.model.entity.RoomEntity;
+import main_project.model.entity.SenderType;
 import main_project.model.repository.MemberRepository;
 import main_project.model.repository.MessageRepository;
 import main_project.model.repository.RoomRepository;
@@ -45,11 +46,9 @@ import main_project.model.repository.RoomRepository;
 @Transactional
 public class ChatService {
 
-//  ---------- 보낸 사람 종류 (message.sender_type 에 들어가는 글자) ----------
-//  이 글자를 다루는 곳은 이 서비스 하나뿐이라 private (다른 서비스는 이 서비스의 메소드를 부름)
-    private static final String SENDER_MEMBER = "MEMBER";
-    private static final String SENDER_ADMIN = "ADMIN";
-    private static final String SENDER_SYSTEM = "SYSTEM";
+//  ---------- 보낸 사람 종류 (message.sender_type) ----------
+//  글자 상수 대신 enum SenderType 사용 (model/entity/SenderType.java) : SenderType.MEMBER / ADMIN / SYSTEM
+//  → 3가지 말고는 넣을 수 없고 , 오타는 컴파일할 때 바로 빨간 줄 , 비교는 == 로
 
 //  ---------- 보낸 사람 이름 (message.sender_name) ----------
     private static final String SYSTEM_NAME = "시스템";     // SYSTEM 메시지의 이름
@@ -108,7 +107,7 @@ public class ChatService {
     //     회원에게 보내는 거라 상담원(ADMIN) 이름은 "고객센터" 로 바꿈 → 상담원 이름이 회원 브라우저에 아예 가지 않음
         List<MessageDto> messageDtos = messageEntities.stream().map( (messageEntity) -> {
             MessageDto messageDto = MessageDto.from(messageEntity);
-            if (SENDER_ADMIN.equals(messageDto.getSenderType())) {
+            if (messageDto.getSenderType() == SenderType.ADMIN) {
                 messageDto.setSenderName(CENTER_NAME);
             }
             return messageDto;
@@ -120,7 +119,7 @@ public class ChatService {
         LocalDateTime readAt = roomEntity.getMemberReadAt();
         if (readAt == null) { readAt = roomEntity.getOpenedAt(); }
         Long unreadCount = messageRepository.countByRoomEntityRoomIdAndSenderTypeAndCreatedAtAfter(
-            roomEntity.getRoomId(), SENDER_ADMIN, readAt);
+            roomEntity.getRoomId(), SenderType.ADMIN, readAt);
 
     //  6. 방 정보에 메시지 목록 + 안 읽음 수를 담아서 반환
         RoomDto roomDto = RoomDto.from(roomEntity);
@@ -187,7 +186,7 @@ public class ChatService {
         //       INSERT INTO message (room_id , sender_type , sender_name , content , created_at) VALUES (...)
             MessageEntity openMessage = MessageEntity.builder()
                 .roomEntity(roomEntity)
-                .senderType(SENDER_SYSTEM)
+                .senderType(SenderType.SYSTEM)
                 .senderName(SYSTEM_NAME)
                 .content(OPEN_TEXT)
                 .build();
@@ -199,7 +198,7 @@ public class ChatService {
         //       특정 상담원이 아니라 자동으로 보내는 인사라 이름을 "고객센터" 로
             MessageEntity welcomeMessage = MessageEntity.builder()
                 .roomEntity(roomEntity)
-                .senderType(SENDER_ADMIN)
+                .senderType(SenderType.ADMIN)
                 .senderName(CENTER_NAME)
                 .content(WELCOME_TEXT)
                 .build();
@@ -219,7 +218,7 @@ public class ChatService {
     //  6. 메시지 엔티티 목록 → DTO 목록 (회원에게 보내는 거라 상담원 이름은 "고객센터" 로 — ① 의 4번과 같음)
         List<MessageDto> messageDtos = messageEntities.stream().map( (messageEntity) -> {
             MessageDto messageDto = MessageDto.from(messageEntity);
-            if (SENDER_ADMIN.equals(messageDto.getSenderType())) {
+            if (messageDto.getSenderType() == SenderType.ADMIN) {
                 messageDto.setSenderName(CENTER_NAME);
             }
             return messageDto;
@@ -229,7 +228,7 @@ public class ChatService {
         LocalDateTime readAt = roomEntity.getMemberReadAt();
         if (readAt == null) { readAt = roomEntity.getOpenedAt(); }
         Long unreadCount = messageRepository.countByRoomEntityRoomIdAndSenderTypeAndCreatedAtAfter(
-            roomEntity.getRoomId(), SENDER_ADMIN, readAt);
+            roomEntity.getRoomId(), SenderType.ADMIN, readAt);
 
     //  8. 방 정보에 메시지 목록 + 안 읽음 수를 담아서 반환
         RoomDto roomDto = RoomDto.from(roomEntity);
@@ -273,7 +272,7 @@ public class ChatService {
         String closeText = isAdmin ? CLOSE_BY_ADMIN_TEXT : CLOSE_BY_MEMBER_TEXT;
         MessageEntity closeMessage = MessageEntity.builder()
             .roomEntity(roomEntity)
-            .senderType(SENDER_SYSTEM)
+            .senderType(SenderType.SYSTEM)
             .senderName(SYSTEM_NAME)
             .content(closeText)
             .build();
@@ -327,7 +326,7 @@ public class ChatService {
             LocalDateTime readAt = roomEntity.getAdminReadAt();
             if (readAt == null) { readAt = roomEntity.getOpenedAt(); }
             Long unreadCount = messageRepository.countByRoomEntityRoomIdAndSenderTypeAndCreatedAtAfter(
-                roomEntity.getRoomId(), SENDER_MEMBER, readAt);
+                roomEntity.getRoomId(), SenderType.MEMBER, readAt);
             roomDto.setUnreadCount(unreadCount);
 
             return roomDto;
@@ -377,7 +376,7 @@ public class ChatService {
     //     회원에게 보낼 때만 상담원(ADMIN) 이름을 "고객센터" 로 바꿈 (① 의 4번과 같음)
         List<MessageDto> messageDtos = messageEntities.stream().map( (messageEntity) -> {
             MessageDto messageDto = MessageDto.from(messageEntity);
-            if (!isAdmin && SENDER_ADMIN.equals(messageDto.getSenderType())) {
+            if (!isAdmin && messageDto.getSenderType() == SenderType.ADMIN) {
                 messageDto.setSenderName(CENTER_NAME);
             }
             return messageDto;
@@ -469,7 +468,7 @@ public class ChatService {
     //     - 보낸 사람 종류 : 관리자면 ADMIN , 아니면 MEMBER
     //     - 보낸 사람 이름 : 보낸 그 순간의 이름을 복사 (관리자면 상담원 이름 → 누가 답했는지 남음)
     //     INSERT INTO message (room_id , sender_type , sender_name , content , created_at) VALUES (...)
-        String senderType = isAdmin ? SENDER_ADMIN : SENDER_MEMBER;
+        SenderType senderType = isAdmin ? SenderType.ADMIN : SenderType.MEMBER;
         MessageEntity messageEntity = MessageEntity.builder()
             .roomEntity(roomEntity)
             .senderType(senderType)
@@ -528,7 +527,7 @@ public class ChatService {
     //     INSERT INTO message (room_id , sender_type , sender_name , content , created_at) VALUES (...)
         MessageEntity withdrawMessage = MessageEntity.builder()
             .roomEntity(roomEntity)
-            .senderType(SENDER_SYSTEM)
+            .senderType(SenderType.SYSTEM)
             .senderName(SYSTEM_NAME)
             .content(withdrawText)
             .build();
@@ -574,7 +573,7 @@ public class ChatService {
 
     //  2. 회원에게 보낼 때는 상담원(ADMIN) 이름을 "고객센터" 로 바꿈 (① 의 4번과 같은 규칙)
     //     1번에서 이미 JSON 글자로 바뀌어 보내졌기 때문에 , 지금 바꿔도 관리자에게 간 내용은 그대로
-        if (SENDER_ADMIN.equals(messageDto.getSenderType())) {
+        if (messageDto.getSenderType() == SenderType.ADMIN) {
             messageDto.setSenderName(CENTER_NAME);
         }
 

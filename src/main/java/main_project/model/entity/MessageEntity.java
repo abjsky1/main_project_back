@@ -8,6 +8,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -55,11 +57,15 @@ public class MessageEntity {
     @JoinColumn(name = "room_id", nullable = false)
     private RoomEntity roomEntity;
 
-    // 보낸 사람 종류 : "MEMBER" / "ADMIN" / "SYSTEM" 중 하나
+    // 보낸 사람 종류 : SenderType.MEMBER / ADMIN / SYSTEM 중 하나 (SenderType.java — enum)
     //  - 3가지로 고정이고 늘어날 일이 없어서 role · action 같은 기초 테이블을 따로 만들지 않고 글자로 저장
-    //  - 글자는 ChatService 의 private 상수로만 넣음 (오타 방지 — 다른 클래스는 ChatService 메소드를 부름)
+    //  - 자바에서는 enum 이라 이 3가지 말고는 넣을 수 없음 (오타는 컴파일할 때 바로 빨간 줄)
+    //  - @Enumerated(EnumType.STRING) : DB 에 enum 의 "이름 글자" 를 저장 ("MEMBER" / "ADMIN" / "SYSTEM")
+    //      ⚠️ STRING 을 꼭 적어야 함 — 안 적으면 기본값 ORDINAL 이라 선언 순서 번호(0 , 1 , 2)가 저장됨
+    //         → 나중에 enum 순서를 바꾸거나 중간에 값을 끼워 넣으면 이미 저장된 번호의 뜻이 통째로 바뀜
+    @Enumerated(EnumType.STRING)
     @Column(name = "sender_type", nullable = false, length = 10)
-    private String senderType;
+    private SenderType senderType;
 
     // 보낸 사람 이름 복사본 (보낸 그 순간의 이름)
     //  - ADMIN  : 답한 상담원 이름 → 상담원이 여러 명이어도 누가 어떤 안내를 했는지 남음 (증거 · 교육 자료)

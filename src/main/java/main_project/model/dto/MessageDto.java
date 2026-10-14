@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import main_project.model.entity.MessageEntity;
+import main_project.model.entity.SenderType;
 
 //  =====================================================================
 //  채팅 메시지 1개 (서버 → 프론트)
@@ -34,7 +35,8 @@ public class MessageDto {
     private Integer roomId;
 
 //  보낸 사람 종류 : MEMBER / ADMIN / SYSTEM (말풍선 위치 · 모양을 정함)
-    private String senderType;
+//  - enum(SenderType) 이지만 JSON 으로 바뀔 때는 이름 글자 그대로 나감 → 프론트는 "ADMIN" 같은 글자로 받음
+    private SenderType senderType;
 
 //  보낸 사람 이름
 //  - 관리자에게 보낼 때 : 저장된 이름 그대로 (ADMIN 이면 답한 상담원 이름)
