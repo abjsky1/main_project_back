@@ -10,7 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import main_project.global.entity.BaseTime;
+import main_project.global.entity.BaseCreatedTime;
 
 
 @Entity
@@ -19,7 +19,7 @@ import main_project.global.entity.BaseTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RoleEntity extends BaseTime {
+public class RoleEntity extends BaseCreatedTime {
 
 //  role 테이블 번호 (MainDBSampleData.sql : 1 = ROLE_USER , 2 = ROLE_ADMIN)
 //  - 여러 곳에서 쓰는 번호라 public 으로 여기 한 곳에만 둠 (프론트 App.tsx 의 ADMIN_ROLE_ID 도 같은 값)

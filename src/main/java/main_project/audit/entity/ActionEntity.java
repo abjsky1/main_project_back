@@ -10,7 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import main_project.global.entity.BaseTime;
+import main_project.global.entity.BaseCreatedTime;
 
 @Entity
 @Table(name = "action")
@@ -18,7 +18,7 @@ import main_project.global.entity.BaseTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ActionEntity extends BaseTime {
+public class ActionEntity extends BaseCreatedTime {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

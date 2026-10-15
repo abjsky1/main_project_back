@@ -21,7 +21,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import main_project.global.entity.BaseTime;
+import main_project.global.entity.BaseCreatedTime;
 import main_project.matching.entity.MatchingEntity;
 import main_project.member.entity.MemberEntity;
 
@@ -31,7 +31,7 @@ import main_project.member.entity.MemberEntity;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Lscore1Entity extends BaseTime {
+public class Lscore1Entity extends BaseCreatedTime {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

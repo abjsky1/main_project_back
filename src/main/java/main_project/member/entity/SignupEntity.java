@@ -10,7 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import main_project.global.entity.BaseTime;
+import main_project.global.entity.BaseCreatedTime;
 
 
 @Entity
@@ -19,7 +19,7 @@ import main_project.global.entity.BaseTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SignupEntity extends BaseTime {
+public class SignupEntity extends BaseCreatedTime {
 
     @Id
     @Column(name = "signup_id")
