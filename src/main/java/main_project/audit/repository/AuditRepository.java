@@ -1,4 +1,4 @@
-package main_project.model.repository;
+package main_project.audit.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -11,7 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import main_project.model.entity.AuditEntity;
+import main_project.audit.entity.AuditEntity;
 
 
 @Repository 

@@ -1,4 +1,4 @@
-package main_project.model.dto;
+package main_project.audit.dto;
  
 import java.time.LocalDateTime;
  
@@ -8,7 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import main_project.model.entity.AuditEntity;
+import main_project.audit.entity.AuditEntity;
  
 @AllArgsConstructor
 @NoArgsConstructor

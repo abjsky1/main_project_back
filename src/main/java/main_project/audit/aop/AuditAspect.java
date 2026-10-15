@@ -1,4 +1,4 @@
-package main_project.audit;
+package main_project.audit.aop;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import main_project.model.dto.AuditSaveDto;
-import main_project.service.AuditService;
+import main_project.audit.dto.AuditSaveDto;
+import main_project.audit.service.AuditService;
 
 //  =====================================================================
 //  감사 로그 자동 기록 AOP
@@ -26,7 +26,7 @@ import main_project.service.AuditService;
 //  - Advice(어드바이스)   : 끼워 넣을 실제 코드 = writeAuditLog() 메소드
 //      @Around            : 원래 메소드의 "앞과 뒤"를 감싸서 실행 (앞에서 확인 → 원래 메소드 실행 → 뒤에서 기록)
 //  - Pointcut(포인트컷)   : 어디에 끼워 넣을지 정하는 규칙
-//      "within(main_project.controller..*)" = controller 패키지(하위 포함) 안의 모든 클래스의 메소드
+//      "within(main_project..controller..*)" = 이름에 controller 가 들어간 패키지(auth.controller , chat.controller ...) 안의 모든 클래스의 메소드
 //  - JoinPoint(조인포인트): 끼워 넣어진 "그 순간의 원래 메소드" 정보 (어떤 메소드인지 , 받은 값 , 반환 타입 ...)
 //      ProceedingJoinPoint.proceed() 를 호출해야 원래 컨트롤러 메소드가 실행됨
 //      (proceed 를 안 부르면 원래 메소드는 실행되지 않으니 꼭 불러야 함!)
@@ -59,11 +59,11 @@ public class AuditAspect {
 
 
 //  ---------------------------------------------------------------------
-//  Advice : controller 패키지의 모든 메소드를 감싸서 실행
+//  Advice : 모든 도메인의 controller 패키지 메소드를 감싸서 실행
 //  반환값(Object) = 원래 컨트롤러 메소드가 돌려준 값 → 그대로 돌려줘야 화면이 정상 응답을 받음
 //  throws Throwable = 원래 메소드에서 난 오류도 그대로 밖으로 내보냄
 //  ---------------------------------------------------------------------
-    @Around("within(main_project.controller..*)")
+    @Around("within(main_project..controller..*)")
     public Object writeAuditLog(ProceedingJoinPoint joinPoint) throws Throwable {
 
     //  [1] 지금 처리 중인 요청 꺼내기 (웹 요청이 아니면 기록하지 않고 원래 메소드만 실행)

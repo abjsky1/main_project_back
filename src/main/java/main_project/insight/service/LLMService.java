@@ -1,4 +1,4 @@
-package main_project.service;
+package main_project.insight.service;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;

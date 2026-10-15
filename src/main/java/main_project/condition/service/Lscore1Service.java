@@ -1,4 +1,4 @@
-package main_project.service;
+package main_project.condition.service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -7,21 +7,22 @@ import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.Lscore1Dto;
-import main_project.model.dto.Lscore2Dto;
-import main_project.model.dto.Lscore3Dto;
-import main_project.model.entity.Lscore1Entity;
-import main_project.model.entity.Cscore1Entity;
-import main_project.model.entity.Lscore2Entity;
-import main_project.model.entity.Lscore3Entity;
-import main_project.model.entity.MatchingEntity;
-import main_project.model.entity.MemberEntity;
-import main_project.model.repository.Lscore1Repository;
-import main_project.model.repository.Lscore2Repository;
-import main_project.model.repository.Lscore3Repository;
-import main_project.model.repository.MatchingRepository;
-import main_project.model.repository.MemberRepository;
-import main_project.model.repository.Cscore1Repository;
+import main_project.condition.dto.Lscore1Dto;
+import main_project.condition.dto.Lscore2Dto;
+import main_project.condition.dto.Lscore3Dto;
+import main_project.condition.entity.Lscore1Entity;
+import main_project.condition.entity.Cscore1Entity;
+import main_project.condition.entity.Lscore2Entity;
+import main_project.condition.entity.Lscore3Entity;
+import main_project.matching.entity.MatchingEntity;
+import main_project.member.entity.MemberEntity;
+import main_project.condition.repository.Lscore1Repository;
+import main_project.condition.repository.Lscore2Repository;
+import main_project.condition.repository.Lscore3Repository;
+import main_project.matching.repository.MatchingRepository;
+import main_project.member.repository.MemberRepository;
+import main_project.condition.repository.Cscore1Repository;
+import main_project.matching.service.MatchingService;
 
 @Service
 @RequiredArgsConstructor

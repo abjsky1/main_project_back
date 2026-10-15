@@ -1,12 +1,12 @@
-package main_project.model.dto;
+package main_project.audit.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import main_project.model.entity.ActionEntity;
-import main_project.model.entity.AuditEntity;
-import main_project.model.entity.MemberEntity;
+import main_project.audit.entity.ActionEntity;
+import main_project.audit.entity.AuditEntity;
+import main_project.member.entity.MemberEntity;
 
 //  감사 로그 "저장용" DTO  (조회용은 AuditDto)
 //  AuditAspect 가 요청 1건을 기록할 때 만들어서 AuditService.record() 로 넘김

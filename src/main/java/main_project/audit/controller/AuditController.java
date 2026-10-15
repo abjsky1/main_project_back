@@ -1,4 +1,4 @@
-package main_project.controller;
+package main_project.audit.controller;
 
 import java.util.List;
 
@@ -9,10 +9,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.ActionDto;
-import main_project.model.dto.AuditPageDto;
-import main_project.service.AuditService;
-import main_project.service.AuthorizationService;
+import main_project.audit.dto.ActionDto;
+import main_project.audit.dto.AuditPageDto;
+import main_project.audit.service.AuditService;
+import main_project.admin.service.AuthorizationService;
 
 //  감사 로그 API — 관리자만 사용할 수 있음
 //  (감사 로그에는 회원 이메일 · 접속 IP 가 들어 있어서 , 관리자가 아니면 조회하지 못하게 막음)

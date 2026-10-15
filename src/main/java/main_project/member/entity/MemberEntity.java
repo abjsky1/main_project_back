@@ -1,4 +1,4 @@
-package main_project.model.entity;
+package main_project.member.entity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +20,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import main_project.util.EncryptedStringConverter;
+import main_project.global.util.EncryptedStringConverter;
+import main_project.condition.entity.Cscore1Entity;
+import main_project.condition.entity.Lscore1Entity;
+import main_project.global.entity.BaseTime;
 
 
 @Entity

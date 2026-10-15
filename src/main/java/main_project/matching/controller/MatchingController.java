@@ -1,5 +1,5 @@
 
-package main_project.controller;
+package main_project.matching.controller;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,18 +15,18 @@ import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.MatchingAiDto;
-import main_project.model.dto.MatchingDto;
-import main_project.model.dto.MatchingPageDto;
-import main_project.model.dto.MatchingSearchDto;
-import main_project.model.entity.MatchingEntity;
-import main_project.model.repository.MatchingRepository;
-import main_project.service.MatchingService;
-import main_project.service.MatchingAiService;
-import main_project.service.MatchingSseService;
-import main_project.service.LoginService;
-import main_project.service.AuthorizationService;
-import main_project.util.JwtUtil;
+import main_project.matching.dto.MatchingAiDto;
+import main_project.matching.dto.MatchingDto;
+import main_project.matching.dto.MatchingPageDto;
+import main_project.matching.dto.MatchingSearchDto;
+import main_project.matching.entity.MatchingEntity;
+import main_project.matching.repository.MatchingRepository;
+import main_project.matching.service.MatchingService;
+import main_project.matching.service.MatchingAiService;
+import main_project.matching.service.MatchingSseService;
+import main_project.auth.service.LoginService;
+import main_project.admin.service.AuthorizationService;
+import main_project.global.util.JwtUtil;
 
 
 @RestController

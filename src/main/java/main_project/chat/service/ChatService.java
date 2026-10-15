@@ -1,4 +1,4 @@
-package main_project.service;
+package main_project.chat.service;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -38,16 +38,16 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import main_project.model.dto.MessageDto;
-import main_project.model.dto.MessageSendDto;
-import main_project.model.dto.RoomDto;
-import main_project.model.entity.MemberEntity;
-import main_project.model.entity.MessageEntity;
-import main_project.model.entity.RoomEntity;
-import main_project.model.entity.SenderType;
-import main_project.model.repository.MemberRepository;
-import main_project.model.repository.MessageRepository;
-import main_project.model.repository.RoomRepository;
+import main_project.chat.dto.MessageDto;
+import main_project.chat.dto.MessageSendDto;
+import main_project.chat.dto.RoomDto;
+import main_project.member.entity.MemberEntity;
+import main_project.chat.entity.MessageEntity;
+import main_project.chat.entity.RoomEntity;
+import main_project.chat.entity.SenderType;
+import main_project.member.repository.MemberRepository;
+import main_project.chat.repository.MessageRepository;
+import main_project.chat.repository.RoomRepository;
 
 //  =====================================================================
 //  고객센터 채팅 서비스
@@ -99,7 +99,7 @@ import main_project.model.repository.RoomRepository;
 public class ChatService {
 
 //  ---------- 보낸 사람 종류 (message.sender_type) ----------
-//  글자 상수 대신 enum SenderType 사용 (model/entity/SenderType.java) : SenderType.MEMBER / ADMIN / SYSTEM
+//  글자 상수 대신 enum SenderType 사용 (chat/entity/SenderType.java) : SenderType.MEMBER / ADMIN / SYSTEM
 //  → 3가지 말고는 넣을 수 없고 , 오타는 컴파일할 때 바로 빨간 줄 , 비교는 == 로
 
 //  ---------- 보낸 사람 이름 (message.sender_name) ----------

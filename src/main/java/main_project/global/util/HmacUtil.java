@@ -1,4 +1,4 @@
-package main_project.util;
+package main_project.global.util;
 
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;

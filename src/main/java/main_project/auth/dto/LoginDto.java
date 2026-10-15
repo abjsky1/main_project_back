@@ -1,4 +1,4 @@
-package main_project.model.dto;
+package main_project.auth.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -1,5 +1,5 @@
 
-package main_project.model.repository;
+package main_project.matching.repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
 
-import main_project.model.entity.MatchingEntity;
+import main_project.matching.entity.MatchingEntity;
 
 @Repository
 public interface MatchingRepository extends JpaRepository<MatchingEntity, Integer> {

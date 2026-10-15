@@ -1,11 +1,11 @@
-package main_project.model.dto;
+package main_project.condition.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import main_project.model.entity.Lscore1Entity;
-import main_project.model.entity.MemberEntity;
+import main_project.condition.entity.Lscore1Entity;
+import main_project.member.entity.MemberEntity;
 
 @AllArgsConstructor
 @NoArgsConstructor

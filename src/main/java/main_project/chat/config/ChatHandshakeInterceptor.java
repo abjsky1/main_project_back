@@ -1,4 +1,4 @@
-package main_project.config;
+package main_project.chat.config;
 
 import java.util.Map;
 
@@ -12,7 +12,7 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 
 import jakarta.servlet.http.Cookie;
 import lombok.RequiredArgsConstructor;
-import main_project.util.JwtUtil;
+import main_project.global.util.JwtUtil;
 
 //  =====================================================================
 //  웹소켓 연결할 때 회원 확인 (day062 에는 없던 부분)

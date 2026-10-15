@@ -1,14 +1,14 @@
-package main_project.service;
+package main_project.trade.service;
 
 import com.opencsv.CSVReader;
 import jakarta.annotation.PostConstruct;
 
-import main_project.model.dto.InsightDto.Point;
-import main_project.model.dto.InsightDto.Country;
-import main_project.model.dto.InsightDto.DataFile;
-import main_project.model.dto.InsightDto.Dataset;
-import main_project.model.dto.InsightDto.Item;
-import main_project.model.dto.InsightDto.Request;
+import main_project.insight.dto.InsightDto.Point;
+import main_project.insight.dto.InsightDto.Country;
+import main_project.insight.dto.InsightDto.DataFile;
+import main_project.insight.dto.InsightDto.Dataset;
+import main_project.insight.dto.InsightDto.Item;
+import main_project.insight.dto.InsightDto.Request;
 
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;

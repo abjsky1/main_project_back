@@ -1,4 +1,4 @@
-package main_project.controller;
+package main_project.insight.controller;
 
 import java.util.List;
 import java.util.Map;
@@ -26,8 +26,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import lombok.RequiredArgsConstructor;
 
-import main_project.model.dto.InsightDto.*;
-import main_project.service.InsightService;
+import main_project.insight.dto.InsightDto.*;
+import main_project.insight.service.InsightService;
 
 @RestController
 @RequestMapping("/api/insights")

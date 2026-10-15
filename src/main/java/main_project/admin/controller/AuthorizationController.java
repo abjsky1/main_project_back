@@ -1,4 +1,4 @@
-package main_project.controller;
+package main_project.admin.controller;
 
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.AuthorizationCountDto;
-import main_project.service.AuthorizationService;
+import main_project.admin.dto.AuthorizationCountDto;
+import main_project.admin.service.AuthorizationService;
 
 //  사용자 권한 관리 API — 관리자만 사용할 수 있음
 //  - 화면(/admin)에서 막는 것만으로는 부족함 : 주소만 알면 Postman · curl 로 직접 호출할 수 있기 때문

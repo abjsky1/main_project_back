@@ -1,4 +1,4 @@
-package main_project.model.dto;
+package main_project.condition.dto;
 
 import java.time.LocalDate;
 
@@ -6,8 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import main_project.model.entity.Cscore1Entity;
-import main_project.model.entity.Cscore2Entity;
+import main_project.condition.entity.Cscore1Entity;
+import main_project.condition.entity.Cscore2Entity;
 
 @AllArgsConstructor 
 @NoArgsConstructor 

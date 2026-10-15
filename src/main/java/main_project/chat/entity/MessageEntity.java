@@ -1,4 +1,4 @@
-package main_project.model.entity;
+package main_project.chat.entity;
 
 import java.time.LocalDateTime;
 

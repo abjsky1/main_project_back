@@ -1,4 +1,4 @@
-package main_project.service;
+package main_project.matching.service;
 
 import java.util.ArrayList;
 
@@ -16,41 +16,40 @@ import jakarta.transaction.Transactional;
 
 import lombok.RequiredArgsConstructor;
 
-import main_project.service.MatchingAiService;
 
-import main_project.model.dto.MatchingDto;
+import main_project.matching.dto.MatchingDto;
 
-import main_project.model.dto.MatchingPageDto;
+import main_project.matching.dto.MatchingPageDto;
 
-import main_project.model.dto.MatchingSearchDto;
+import main_project.matching.dto.MatchingSearchDto;
 
-import main_project.model.entity.Cscore1Entity;
+import main_project.condition.entity.Cscore1Entity;
 
-import main_project.model.entity.Cscore2Entity;
+import main_project.condition.entity.Cscore2Entity;
 
-import main_project.model.entity.Cscore3Entity;
+import main_project.condition.entity.Cscore3Entity;
 
-import main_project.model.entity.Lscore1Entity;
+import main_project.condition.entity.Lscore1Entity;
 
-import main_project.model.entity.Lscore2Entity;
+import main_project.condition.entity.Lscore2Entity;
 
-import main_project.model.entity.Lscore3Entity;
+import main_project.condition.entity.Lscore3Entity;
 
-import main_project.model.entity.MatchingEntity;
+import main_project.matching.entity.MatchingEntity;
 
-import main_project.model.repository.Cscore1Repository;
+import main_project.condition.repository.Cscore1Repository;
 
-import main_project.model.repository.Cscore2Repository;
+import main_project.condition.repository.Cscore2Repository;
 
-import main_project.model.repository.Cscore3Repository;
+import main_project.condition.repository.Cscore3Repository;
 
-import main_project.model.repository.Lscore1Repository;
+import main_project.condition.repository.Lscore1Repository;
 
-import main_project.model.repository.Lscore2Repository;
+import main_project.condition.repository.Lscore2Repository;
 
-import main_project.model.repository.Lscore3Repository;
+import main_project.condition.repository.Lscore3Repository;
 
-import main_project.model.repository.MatchingRepository;
+import main_project.matching.repository.MatchingRepository;
 
 @Service
 

@@ -1,6 +1,6 @@
-package main_project.model.repository;
+package main_project.insight.repository;
 
-import main_project.model.entity.InsightHistoryEntity;
+import main_project.insight.entity.InsightHistoryEntity;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

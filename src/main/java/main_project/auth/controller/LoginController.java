@@ -1,4 +1,4 @@
-package main_project.controller;
+package main_project.auth.controller;
 
 import java.time.Duration;
 
@@ -13,12 +13,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.LoginDto;
-import main_project.model.entity.MemberEntity;
-import main_project.service.LoginService;
-import main_project.service.RedisTokenService;
-import main_project.util.JwtUtil;
-import main_project.model.dto.MemberDto;
+import main_project.auth.dto.LoginDto;
+import main_project.member.entity.MemberEntity;
+import main_project.auth.service.LoginService;
+import main_project.auth.service.RedisTokenService;
+import main_project.global.util.JwtUtil;
+import main_project.member.dto.MemberDto;
 
 @RestController
 @RequestMapping("/api/auth")

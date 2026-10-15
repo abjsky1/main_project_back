@@ -1,4 +1,4 @@
-package main_project.model.repository;
+package main_project.member.repository;
 
 
 import java.util.List;
@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import main_project.model.entity.MemberEntity;
+import main_project.member.entity.MemberEntity;
 
 
 @Repository 

@@ -1,12 +1,12 @@
-package main_project.service;
+package main_project.insight.service;
 
 import lombok.RequiredArgsConstructor;
 
-import main_project.model.dto.MemberDto;
-import main_project.model.dto.InsightDto.Condition;
-import main_project.model.dto.InsightDto.Country;
-import main_project.model.dto.InsightDto.Profile;
-import main_project.util.JwtUtil;
+import main_project.member.dto.MemberDto;
+import main_project.insight.dto.InsightDto.Condition;
+import main_project.insight.dto.InsightDto.Country;
+import main_project.insight.dto.InsightDto.Profile;
+import main_project.global.util.JwtUtil;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,6 +15,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.temporal.TemporalAccessor;
 import java.util.*;
+import main_project.auth.service.LoginService;
+import main_project.condition.service.Cscore1Service;
+import main_project.condition.service.Lscore1Service;
+import main_project.trade.service.TradeCodeCatalog;
 
 @Service
 @RequiredArgsConstructor

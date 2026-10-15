@@ -1,4 +1,4 @@
-package main_project.controller;
+package main_project.chat.controller;
 
 import java.util.List;
 
@@ -11,11 +11,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.MessageDto;
-import main_project.model.dto.RoomDto;
-import main_project.service.AuthorizationService;
-import main_project.service.ChatService;
-import main_project.util.JwtUtil;
+import main_project.chat.dto.MessageDto;
+import main_project.chat.dto.RoomDto;
+import main_project.admin.service.AuthorizationService;
+import main_project.chat.service.ChatService;
+import main_project.global.util.JwtUtil;
 
 //  =====================================================================
 //  고객센터 채팅 REST API (지난 대화 불러오기 · 상담 시작/종료 · 읽음 처리)

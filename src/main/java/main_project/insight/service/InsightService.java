@@ -1,4 +1,4 @@
-package main_project.service;
+package main_project.insight.service;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -9,9 +9,9 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import main_project.model.dto.MemberDto;
-import main_project.model.dto.InsightDto.*;
-import main_project.util.InsightOutputValidator;
+import main_project.member.dto.MemberDto;
+import main_project.insight.dto.InsightDto.*;
+import main_project.insight.util.InsightOutputValidator;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -25,6 +25,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
+import main_project.trade.service.TradeCodeCatalog;
 
 @Service
 @RequiredArgsConstructor

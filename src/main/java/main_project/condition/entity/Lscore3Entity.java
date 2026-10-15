@@ -1,4 +1,4 @@
-package main_project.model.entity;
+package main_project.condition.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

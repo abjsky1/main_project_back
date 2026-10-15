@@ -1,4 +1,4 @@
-package main_project.controller;
+package main_project.exchange.controller;
 
 import java.util.List;
 
@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.ExchangeDto;
-import main_project.service.ExchangeService;
+import main_project.exchange.dto.ExchangeDto;
+import main_project.exchange.service.ExchangeService;
 
 @RestController
 @RequestMapping("/api/exchange")      

@@ -1,5 +1,5 @@
 
-package main_project.model.repository;
+package main_project.condition.repository;
 
 import java.util.Optional;
 import java.util.List;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.LockModeType;
 
-import main_project.model.entity.Cscore1Entity;
+import main_project.condition.entity.Cscore1Entity;
 
 @Repository
 public interface Cscore1Repository extends JpaRepository<Cscore1Entity, Integer> {

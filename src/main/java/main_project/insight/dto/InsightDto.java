@@ -1,4 +1,4 @@
-package main_project.model.dto;
+package main_project.insight.dto;
 
 import tools.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;

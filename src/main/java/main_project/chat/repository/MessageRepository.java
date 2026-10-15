@@ -1,4 +1,4 @@
-package main_project.model.repository;
+package main_project.chat.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import main_project.model.entity.MessageEntity;
+import main_project.chat.entity.MessageEntity;
 
 //  고객센터 채팅 메시지 Repository
 //  - 메소드 이름 규칙은 RoomRepository 위쪽 주석 참고

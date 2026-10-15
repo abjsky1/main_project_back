@@ -1,5 +1,5 @@
 
-package main_project.model.dto;
+package main_project.matching.dto;
 
 import java.time.LocalDateTime;
 

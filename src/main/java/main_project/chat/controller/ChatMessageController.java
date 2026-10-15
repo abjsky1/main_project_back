@@ -1,4 +1,4 @@
-package main_project.controller;
+package main_project.chat.controller;
 
 import java.util.Map;
 
@@ -7,9 +7,9 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
 
 import lombok.RequiredArgsConstructor;
-import main_project.config.ChatHandshakeInterceptor;
-import main_project.model.dto.MessageSendDto;
-import main_project.service.ChatService;
+import main_project.chat.config.ChatHandshakeInterceptor;
+import main_project.chat.dto.MessageSendDto;
+import main_project.chat.service.ChatService;
 
 //  =====================================================================
 //  웹소켓 메시지 받기 (springweb day062 의 MessageController 와 같은 구조)

@@ -1,4 +1,4 @@
-package main_project.service;
+package main_project.audit.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,17 +18,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import main_project.audit.AuditTargets;
-import main_project.model.dto.AuditDto;
-import main_project.model.dto.ActionDto;
-import main_project.model.dto.AuditPageDto;
-import main_project.model.dto.AuditSaveDto;
-import main_project.model.entity.ActionEntity;
-import main_project.model.entity.AuditEntity;
-import main_project.model.entity.MemberEntity;
-import main_project.model.repository.ActionRepository;
-import main_project.model.repository.AuditRepository;
-import main_project.model.repository.MemberRepository;
+import main_project.audit.aop.AuditTargets;
+import main_project.audit.dto.AuditDto;
+import main_project.audit.dto.ActionDto;
+import main_project.audit.dto.AuditPageDto;
+import main_project.audit.dto.AuditSaveDto;
+import main_project.audit.entity.ActionEntity;
+import main_project.audit.entity.AuditEntity;
+import main_project.member.entity.MemberEntity;
+import main_project.audit.repository.ActionRepository;
+import main_project.audit.repository.AuditRepository;
+import main_project.member.repository.MemberRepository;
 
 @Slf4j
 @Service

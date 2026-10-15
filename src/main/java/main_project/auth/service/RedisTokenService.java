@@ -1,4 +1,4 @@
-package main_project.service;
+package main_project.auth.service;
 
 import java.time.Duration;
 

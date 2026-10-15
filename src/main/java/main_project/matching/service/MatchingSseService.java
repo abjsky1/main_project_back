@@ -1,5 +1,5 @@
 
-package main_project.service;
+package main_project.matching.service;
 
 import java.io.IOException;
 import java.util.List;

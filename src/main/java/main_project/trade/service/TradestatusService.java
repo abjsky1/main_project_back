@@ -1,4 +1,4 @@
-package main_project.service;
+package main_project.trade.service;
 
 import java.io.File;
 import java.math.BigDecimal;
@@ -17,8 +17,8 @@ import org.springframework.stereotype.Service;
 import com.opencsv.CSVReader;
 
 import jakarta.annotation.PostConstruct;
-import main_project.model.dto.MonthlyTradeDto;
-import main_project.model.dto.TradestatusDto;
+import main_project.trade.dto.MonthlyTradeDto;
+import main_project.trade.dto.TradestatusDto;
 
 @Service
 public class TradestatusService {

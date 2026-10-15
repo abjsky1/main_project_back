@@ -1,4 +1,4 @@
-package main_project.model.entity;
+package main_project.chat.entity;
 
 //  =====================================================================
 //  채팅 메시지의 보낸 사람 종류 (message.sender_type) — enum(열거형)

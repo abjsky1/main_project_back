@@ -1,4 +1,4 @@
-package main_project.audit;
+package main_project.audit.aop;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -14,12 +14,12 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.MemberDto;
-import main_project.model.entity.MemberEntity;
-import main_project.model.repository.MemberRepository;
-import main_project.util.HmacUtil;
-import main_project.util.JwtUtil;
-import main_project.util.PiiNormalizer;
+import main_project.member.dto.MemberDto;
+import main_project.member.entity.MemberEntity;
+import main_project.member.repository.MemberRepository;
+import main_project.global.util.HmacUtil;
+import main_project.global.util.JwtUtil;
+import main_project.global.util.PiiNormalizer;
 
 //  =====================================================================
 //  감사 로그 도우미 ① : 요청(HttpServletRequest)에서 필요한 정보 꺼내기

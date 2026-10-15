@@ -1,4 +1,4 @@
-package main_project.model.dto;
+package main_project.audit.dto;
 
 import java.util.List;
 

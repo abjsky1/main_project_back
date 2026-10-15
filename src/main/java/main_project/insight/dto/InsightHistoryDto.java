@@ -1,4 +1,4 @@
-package main_project.model.dto;
+package main_project.insight.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import main_project.model.entity.InsightHistoryEntity;
+import main_project.insight.entity.InsightHistoryEntity;
 
 import java.time.Instant;
 

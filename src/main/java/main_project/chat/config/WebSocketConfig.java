@@ -1,4 +1,4 @@
-package main_project.config;
+package main_project.chat.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;

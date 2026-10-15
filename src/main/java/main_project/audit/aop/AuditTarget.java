@@ -1,4 +1,4 @@
-package main_project.audit;
+package main_project.audit.aop;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

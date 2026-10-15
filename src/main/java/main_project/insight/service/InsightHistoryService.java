@@ -1,4 +1,4 @@
-package main_project.service;
+package main_project.insight.service;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -6,10 +6,10 @@ import tools.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 
-import main_project.model.dto.InsightDto.*;
-import main_project.model.dto.InsightHistoryDto;
-import main_project.model.entity.InsightHistoryEntity;
-import main_project.model.repository.InsightHistoryRepository;
+import main_project.insight.dto.InsightDto.*;
+import main_project.insight.dto.InsightHistoryDto;
+import main_project.insight.entity.InsightHistoryEntity;
+import main_project.insight.repository.InsightHistoryRepository;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;

@@ -1,4 +1,4 @@
-package main_project.controller;
+package main_project.member.controller;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -11,12 +11,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.MypageDto;
-import main_project.model.dto.PasswordChangeDto;
-import main_project.model.dto.WithdrawDto;
-import main_project.service.MypageService;
-import main_project.service.RedisTokenService;
-import main_project.util.JwtUtil;
+import main_project.member.dto.MypageDto;
+import main_project.member.dto.PasswordChangeDto;
+import main_project.member.dto.WithdrawDto;
+import main_project.member.service.MypageService;
+import main_project.auth.service.RedisTokenService;
+import main_project.global.util.JwtUtil;
 
 @RestController
 @RequiredArgsConstructor

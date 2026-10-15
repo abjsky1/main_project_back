@@ -1,4 +1,4 @@
-package main_project.model.entity;
+package main_project.member.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import main_project.global.entity.BaseTime;
 
 
 @Entity

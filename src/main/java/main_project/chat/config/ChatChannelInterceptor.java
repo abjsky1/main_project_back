@@ -1,4 +1,4 @@
-package main_project.config;
+package main_project.chat.config;
 
 import java.time.Duration;
 import java.util.Map;
@@ -12,7 +12,7 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.stereotype.Component;
 
-import main_project.service.ChatService;
+import main_project.chat.service.ChatService;
 
 //  =====================================================================
 //  웹소켓 프레임 검사 — 남의 채팅방 엿듣기 · 가짜 메시지 막기 (day062 에는 없던 부분)

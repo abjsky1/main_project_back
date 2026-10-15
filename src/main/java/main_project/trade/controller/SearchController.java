@@ -1,4 +1,4 @@
-package main_project.controller;
+package main_project.trade.controller;
 
 import java.util.List;
 
@@ -9,10 +9,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.SearchDto;
-import main_project.model.dto.TradeSearchDto;
-import main_project.service.SearchHistoryService;
-import main_project.service.SearchService;
+import main_project.trade.dto.SearchDto;
+import main_project.trade.dto.TradeSearchDto;
+import main_project.trade.service.SearchHistoryService;
+import main_project.trade.service.SearchService;
 
 @RestController
 @RequestMapping("/api/trade")

@@ -1,4 +1,4 @@
-package main_project.service;
+package main_project.matching.service;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -17,11 +17,11 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import main_project.model.dto.MatchingAiDto;
-import main_project.model.entity.Cscore1Entity;
-import main_project.model.entity.Cscore2Entity;
-import main_project.model.entity.Lscore1Entity;
-import main_project.model.entity.Lscore2Entity;
+import main_project.matching.dto.MatchingAiDto;
+import main_project.condition.entity.Cscore1Entity;
+import main_project.condition.entity.Cscore2Entity;
+import main_project.condition.entity.Lscore1Entity;
+import main_project.condition.entity.Lscore2Entity;
 import reactor.util.retry.Retry;
 
 

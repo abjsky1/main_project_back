@@ -1,5 +1,5 @@
 
-package main_project.controller;
+package main_project.condition.controller;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,17 +16,17 @@ import org.springframework.web.bind.annotation.CookieValue;
 
 import lombok.RequiredArgsConstructor;
 
-import main_project.model.dto.Cscore1Dto;
-import main_project.model.dto.Cscore2Dto;
-import main_project.model.dto.Cscore3Dto;
-import main_project.model.dto.CscoreRequestDto;
+import main_project.condition.dto.Cscore1Dto;
+import main_project.condition.dto.Cscore2Dto;
+import main_project.condition.dto.Cscore3Dto;
+import main_project.condition.dto.CscoreRequestDto;
 
-import main_project.service.Cscore1Service;
-import main_project.service.LoginService;
-import main_project.service.MatchingSseService;
-import main_project.service.AuthorizationService;
+import main_project.condition.service.Cscore1Service;
+import main_project.auth.service.LoginService;
+import main_project.matching.service.MatchingSseService;
+import main_project.admin.service.AuthorizationService;
 
-import main_project.util.JwtUtil;
+import main_project.global.util.JwtUtil;
 
 
 @RestController

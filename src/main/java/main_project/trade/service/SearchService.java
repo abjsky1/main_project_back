@@ -1,4 +1,4 @@
-package main_project.service;
+package main_project.trade.service;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -23,8 +23,8 @@ import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 
 import jakarta.annotation.PostConstruct;
-import main_project.model.dto.SearchDto;
-import main_project.model.dto.TradeSearchDto;
+import main_project.trade.dto.SearchDto;
+import main_project.trade.dto.TradeSearchDto;
 
 @Service
 public class SearchService {

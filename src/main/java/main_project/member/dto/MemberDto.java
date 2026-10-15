@@ -1,12 +1,12 @@
-package main_project.model.dto;
+package main_project.member.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import main_project.model.entity.MemberEntity;
-import main_project.model.entity.RoleEntity;
-import main_project.model.entity.SignupEntity;
+import main_project.member.entity.MemberEntity;
+import main_project.member.entity.RoleEntity;
+import main_project.member.entity.SignupEntity;
 
 @Data
 @Builder

@@ -1,4 +1,4 @@
-package main_project.model.repository;
+package main_project.chat.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import main_project.model.entity.RoomEntity;
+import main_project.chat.entity.RoomEntity;
 
 //  고객센터 채팅방 Repository
 //  - JpaRepository<엔티티 , PK 타입> 를 상속하면 save / findById / findAll 같은 기본 메소드가 자동으로 생김

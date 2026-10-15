@@ -1,4 +1,4 @@
-package main_project.model.entity;
+package main_project.condition.entity;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +21,9 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import main_project.global.entity.BaseTime;
+import main_project.matching.entity.MatchingEntity;
+import main_project.member.entity.MemberEntity;
 
 @Entity
 @Table(name = "cscore1")

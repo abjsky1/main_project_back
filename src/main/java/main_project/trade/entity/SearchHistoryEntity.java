@@ -1,4 +1,4 @@
-package main_project.model.entity;
+package main_project.trade.entity;
 
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
@@ -16,6 +16,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import main_project.member.entity.MemberEntity;
 
 @Entity
 @Table(name = "search_history")

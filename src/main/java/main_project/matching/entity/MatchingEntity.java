@@ -1,5 +1,5 @@
 
-package main_project.model.entity;
+package main_project.matching.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,6 +15,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import main_project.condition.entity.Cscore1Entity;
+import main_project.condition.entity.Lscore1Entity;
+import main_project.global.entity.BaseTime;
 
 @Entity
 

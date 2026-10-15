@@ -1,4 +1,4 @@
-package main_project.service;
+package main_project.exchange.service;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -20,8 +20,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.ExchangeApiDto;
-import main_project.model.dto.ExchangerateDto;
+import main_project.exchange.dto.ExchangeApiDto;
+import main_project.exchange.dto.ExchangerateDto;
 
 @Service
 @RequiredArgsConstructor

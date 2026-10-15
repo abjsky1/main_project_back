@@ -1,13 +1,13 @@
-package main_project.model.repository;
+package main_project.condition.repository;
 
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import main_project.model.entity.Cscore1Entity;
-import main_project.model.entity.Cscore2Entity;
-import main_project.model.entity.Cscore3Entity;
+import main_project.condition.entity.Cscore1Entity;
+import main_project.condition.entity.Cscore2Entity;
+import main_project.condition.entity.Cscore3Entity;
 import java.util.List;
 
 

@@ -1,4 +1,4 @@
-package main_project.model.dto;
+package main_project.exchange.dto;
 
 import java.math.BigDecimal;
 import java.util.Map;

@@ -1,10 +1,10 @@
-package main_project.model.dto;
+package main_project.audit.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import main_project.model.entity.ActionEntity;
+import main_project.audit.entity.ActionEntity;
 
 //  작업 유형 1개 (서버 → 프론트) — 감사 로그 필터 줄의 "작업 유형" 선택칸 목록
 //  예) { "actionId": 2, "actionType": "로그인" }

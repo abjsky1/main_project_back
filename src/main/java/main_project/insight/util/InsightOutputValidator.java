@@ -1,4 +1,4 @@
-package main_project.util;
+package main_project.insight.util;
 
 import tools.jackson.databind.JsonNode;
 

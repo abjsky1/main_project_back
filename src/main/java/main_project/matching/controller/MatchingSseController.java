@@ -1,5 +1,5 @@
 
-package main_project.controller;
+package main_project.matching.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -11,9 +11,9 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import lombok.RequiredArgsConstructor;
-import main_project.service.MatchingSseService;
-import main_project.service.LoginService;
-import main_project.util.JwtUtil;
+import main_project.matching.service.MatchingSseService;
+import main_project.auth.service.LoginService;
+import main_project.global.util.JwtUtil;
 
 @RestController
 @RequestMapping("/api/matchings")

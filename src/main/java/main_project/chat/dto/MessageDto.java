@@ -1,4 +1,4 @@
-package main_project.model.dto;
+package main_project.chat.dto;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -9,8 +9,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import main_project.model.entity.MessageEntity;
-import main_project.model.entity.SenderType;
+import main_project.chat.entity.MessageEntity;
+import main_project.chat.entity.SenderType;
 
 //  =====================================================================
 //  채팅 메시지 1개 (서버 → 프론트)

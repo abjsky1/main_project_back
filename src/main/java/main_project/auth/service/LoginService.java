@@ -1,15 +1,15 @@
-package main_project.service;
+package main_project.auth.service;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import main_project.model.dto.LoginDto;
-import main_project.model.dto.MemberDto;
-import main_project.model.entity.MemberEntity;
-import main_project.model.repository.MemberRepository;
-import main_project.util.HmacUtil;
-import main_project.util.PiiNormalizer;
+import main_project.auth.dto.LoginDto;
+import main_project.member.dto.MemberDto;
+import main_project.member.entity.MemberEntity;
+import main_project.member.repository.MemberRepository;
+import main_project.global.util.HmacUtil;
+import main_project.global.util.PiiNormalizer;
 
 @Service 
 @RequiredArgsConstructor 
