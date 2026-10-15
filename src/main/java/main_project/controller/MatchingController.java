@@ -30,7 +30,7 @@ import main_project.util.JwtUtil;
 
 
 @RestController
-@RequestMapping("/api/matching")
+@RequestMapping("/api")      // 관리자 목록은 /api/admin , 내 목록은 /api/members/me 아래라 여기서는 /api 까지만
 @RequiredArgsConstructor
 public class MatchingController {
 
@@ -54,24 +54,8 @@ public class MatchingController {
     private final AuthorizationService authorizationService;
 
 
-    // [1] 매칭 결과 전체 조회 (관리자)
-    @GetMapping("")
-    public List<MatchingDto> matchingRead(
-            @CookieValue(value = "AccessToken", required = false) String accessToken) {
-
-        // 1. 관리자 권한 확인
-        boolean result = adminCheck(accessToken);
-
-        // 2. 관리자가 아니면 빈 리스트 반환
-        if (result == false) {return new ArrayList<>();}
-
-        // 3. 관리자라면 전체 매칭 조회
-        return matchingService.matchingRead();
-
-    }
-
-    // [1-1] 관리자 매칭 관리 화면 — 상태별 건수 5개 + 고른 상태의 매칭 한 페이지(50건)를 한 번에
-    //  예) GET /api/matching/admin?status=completed&keyword=로지스&reason=선복&transportType=true&regularRoute=false&sort=score&dir=desc&page=0
+    // [1] 관리자 매칭 관리 화면 — 상태별 건수 5개 + 고른 상태의 매칭 한 페이지(50건)를 한 번에
+    //  예) GET /api/admin/matchings?status=completed&keyword=로지스&reason=선복&transportType=true&regularRoute=false&sort=score&dir=desc&page=0
     //  - 조건이 많아서 @ModelAttribute 로 DTO 하나에 받음 (주소의 ?이름=값 → MatchingSearchDto 의 같은 이름 필드)
     //      status        : all / linked / requested / completed / failed , 안 보내면 all
     //      keyword       : 화주사 · 운송사 회사 이름 검색어 , reason : 추천 이유 · 주의 사항 검색어 , 안 보내면 전체
@@ -81,7 +65,7 @@ public class MatchingController {
     //      (무역 데이터 조건 검색 SearchController 의 @ModelAttribute SearchDto 와 같은 방식)
     //  - 관리자가 아니면 null (화면은 "관리자만 볼 수 있습니다")
     //  (예전에 상태마다 따로 있던 /recommended , /shipper-requested , /completed , /failed 4개를 이 주소 하나로 합침)
-    @GetMapping("/admin")
+    @GetMapping("/admin/matchings")
     public MatchingPageDto matchingAdminRead(
             @ModelAttribute MatchingSearchDto matchingSearchDto,
             @CookieValue(value = "AccessToken", required = false) String accessToken) {
@@ -95,13 +79,16 @@ public class MatchingController {
     }
 
 
-    // [2] 회원별 매칭 결과 조회
-    @GetMapping("/member/{memberId}")
+    // [2] 내 매칭 결과 조회 — 회원 번호는 주소가 아니라 로그인 쿠키에서 꺼냄
+    @GetMapping("/members/me/matchings")
     public List<MatchingDto> matchingMemberRead(
-            @PathVariable("memberId") String memberId,
             @CookieValue(value = "AccessToken", required = false) String accessToken) {
 
-        // 1. 로그인 회원 본인인지 확인
+        // 1. 쿠키 속 토큰에서 회원 번호 꺼내기 (없거나 만료 · 가짜면 빈 리스트)
+        if (accessToken == null) {return new ArrayList<>();}
+        String memberId = jwtUtil.getMemberIdFromToken(accessToken);
+
+        // 1-1. 존재하는 활성 회원인지 확인
         boolean result = memberCheck(accessToken, memberId);
 
         // 2. 본인이 아니면 빈 리스트 반환
@@ -119,7 +106,7 @@ public class MatchingController {
 
     // [3] 수출입기업(화주) 매칭 수락
     // A방식에서는 물류기업에 매칭을 요청하는 기능
-    @PostMapping("/shipper/accept/{matchingId}")
+    @PostMapping("/matchings/{matchingId}/shipper/accept")
     public boolean shipperAccept(
             @PathVariable("matchingId") Integer matchingId,
             @RequestParam("memberId") String memberId,
@@ -151,7 +138,7 @@ public class MatchingController {
 
 
     // [4] 수출입기업(화주) 매칭 거절
-    @PostMapping("/shipper/reject/{matchingId}")
+    @PostMapping("/matchings/{matchingId}/shipper/reject")
     public boolean shipperReject(
             @PathVariable("matchingId") Integer matchingId,
             @RequestParam("memberId") String memberId,
@@ -183,7 +170,7 @@ public class MatchingController {
 
     // [5] 물류기업 매칭 수락
     // 관리자 승인 없이 매칭 완료
-    @PostMapping("/logistics/accept/{matchingId}")
+    @PostMapping("/matchings/{matchingId}/logistics/accept")
     public boolean logisticsAccept(
             @PathVariable("matchingId") Integer matchingId,
             @RequestParam("memberId") String memberId,
@@ -214,7 +201,7 @@ public class MatchingController {
     }
 
     // [6] 물류기업 매칭 거절
-    @PostMapping("/logistics/reject/{matchingId}")
+    @PostMapping("/matchings/{matchingId}/logistics/reject")
     public boolean logisticsReject(
             @PathVariable("matchingId") Integer matchingId,
             @RequestParam("memberId") String memberId,
@@ -328,7 +315,7 @@ public class MatchingController {
     
     // [추가] 내 매칭에서 버튼 클릭 시 Gemini 점수 비교
     @PostMapping(
-            value = "/ai/compare/{matchingId}",
+            value = "/matchings/{matchingId}/ai/compare",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public MatchingAiDto matchingAiCompare(

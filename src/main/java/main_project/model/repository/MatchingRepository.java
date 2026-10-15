@@ -39,11 +39,6 @@ public interface MatchingRepository extends JpaRepository<MatchingEntity, Intege
     // 특정 물류기업 회원의 매칭 목록 조회
     List<MatchingEntity> findByLscore1EntityMemberEntityMemberId(String memberId);
 
-    // [4] 전체 매칭 결과 최신순 조회
-    // 관리자 매칭 목록에서 사용
-    List<MatchingEntity> findAllByOrderByCreatedAtDescMatchingIdDesc();
-
-
     // [5] 로그인한 회원의 매칭 결과 조회
     // 화주는 본인의 모든 추천 매칭 조회
     // 물류기업은 화주가 요청한 매칭만 조회

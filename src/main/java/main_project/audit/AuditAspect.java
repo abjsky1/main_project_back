@@ -72,7 +72,7 @@ public class AuditAspect {
             return joinPoint.proceed();
         }
 
-    //  [2] 등록표에서 찾기  예) "DELETE" + "/api/cscore/{cscore1Id}"
+    //  [2] 등록표에서 찾기  예) "DELETE" + "/api/conditions/shipper/{cscore1Id}"
     //      등록표에 없는 API 면 기록하지 않고 원래 메소드만 실행
         String httpMethod = request.getMethod();
         String urlPattern = requestReader.urlPattern(request);

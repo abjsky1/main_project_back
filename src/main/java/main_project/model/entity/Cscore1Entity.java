@@ -66,7 +66,7 @@ public class Cscore1Entity extends BaseTime {
 //  (MemberEntity 의 cscore1Entities 에서 이어지는 cascade — 회원 → 조건 1번 → 아래 3가지)
 //  mappedBy = "cscore1Entity" : 자식 엔티티의 cscore1Entity 칸이 FK(cscore1_id) 를 가지고 있다는 뜻 (DB 칸 추가 없음)
 //  cascade = CascadeType.REMOVE : 이 조건이 삭제되면 자식도 같이 삭제
-//  ※ 조건 삭제 API(DELETE /api/cscore/{id})는 지금처럼 Service 가 2·3번을 먼저 지우고 , 매칭 결과가 있으면 삭제를 막음 (동작 변화 없음)
+//  ※ 조건 삭제 API(DELETE /api/conditions/shipper/{id})는 지금처럼 Service 가 2·3번을 먼저 지우고 , 매칭 결과가 있으면 삭제를 막음 (동작 변화 없음)
 
     // 2번 조건 (물량 · 일정) — 조건 1개에 1개
     @OneToOne(mappedBy = "cscore1Entity", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)

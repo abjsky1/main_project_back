@@ -30,7 +30,7 @@ import main_project.util.JwtUtil;
 
 
 @RestController
-@RequestMapping("/api/cscore")
+@RequestMapping("/api/conditions/shipper")
 @RequiredArgsConstructor
 public class Cscore1Controller {
 
@@ -168,7 +168,7 @@ public class Cscore1Controller {
 
 
     // [4] Cscore1에 연결된 Cscore2 조회
-    @GetMapping("/{cscore1Id}/cscore2")
+    @GetMapping("/{cscore1Id}/volume")
     public Cscore2Dto cscore2Read(
             @PathVariable("cscore1Id") Integer cscore1Id,
             @CookieValue(value = "AccessToken", required = false) String accessToken) {
@@ -189,7 +189,7 @@ public class Cscore1Controller {
 
 
     // [5] Cscore1에 연결된 Cscore3 조회
-    @GetMapping("/{cscore1Id}/cscore3")
+    @GetMapping("/{cscore1Id}/cargo")
     public Cscore3Dto cscore3Read(
             @PathVariable("cscore1Id") Integer cscore1Id,
             @CookieValue(value = "AccessToken", required = false) String accessToken) {

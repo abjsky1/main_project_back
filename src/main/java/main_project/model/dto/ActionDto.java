@@ -8,7 +8,7 @@ import main_project.model.entity.ActionEntity;
 
 //  작업 유형 1개 (서버 → 프론트) — 감사 로그 필터 줄의 "작업 유형" 선택칸 목록
 //  예) { "actionId": 2, "actionType": "로그인" }
-//  - 쓰이는 곳 : GET /api/audit/actions (AuditController)
+//  - 쓰이는 곳 : GET /api/admin/actions (AuditController)
 //  - action 테이블의 행을 그대로 옮겨 담음 (작업 유형이 늘어나도 DB 에만 추가하면 선택칸에 자동으로 나옴)
 @AllArgsConstructor
 @NoArgsConstructor

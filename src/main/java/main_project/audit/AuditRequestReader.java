@@ -62,7 +62,7 @@ public class AuditRequestReader {
 
 //  ---------------------------------------------------------------------
 //  2. 요청 주소의 "모양(패턴)"
-//  실제 주소가 /api/cscore/12 이면 → "/api/cscore/{cscore1Id}"
+//  실제 주소가 /api/conditions/shipper/12 이면 → "/api/conditions/shipper/{cscore1Id}"
 //  스프링이 어느 컨트롤러 메소드로 보낼지 정할 때 요청에 적어 둔 값을 꺼냄.
 //  등록표(AuditTargets)는 이 패턴으로 찾기 때문에 번호가 달라도 같은 줄을 찾을 수 있음.
 //  ---------------------------------------------------------------------
@@ -77,7 +77,7 @@ public class AuditRequestReader {
 
 //  ---------------------------------------------------------------------
 //  3. 주소 안의 {이름} 값
-//  예) 패턴 /api/authorization/{memberId}/role , 실제 주소 /api/authorization/abc-123/role
+//  예) 패턴 /api/admin/members/{memberId}/role , 실제 주소 /api/admin/members/abc-123/role
 //      → pathValue(request, "memberId") = "abc-123"
 //  ---------------------------------------------------------------------
     public String pathValue(HttpServletRequest request, String name){
@@ -88,7 +88,7 @@ public class AuditRequestReader {
         return variables.get(name).toString();
     }
 
-//  주소 안의 첫 번째 {번호} 값 (이름을 몰라도 됨)  예) /api/cscore/12 → "12"
+//  주소 안의 첫 번째 {번호} 값 (이름을 몰라도 됨)  예) /api/conditions/shipper/12 → "12"
     public String firstPathValue(HttpServletRequest request){
         Map<?, ?> variables = pathVariables(request);
         if (variables == null || variables.isEmpty()) {
@@ -108,7 +108,7 @@ public class AuditRequestReader {
 
 
 //  ---------------------------------------------------------------------
-//  4. 주소 뒤 ?이름=값 (쿼리 파라미터)   예) /api/matching/reject/5?rejectReason=일정 불일치
+//  4. 주소 뒤 ?이름=값 (쿼리 파라미터)   예) /api/matchings/5/shipper/reject?rejectReason=일정 불일치
 //  ---------------------------------------------------------------------
     public String requestParam(HttpServletRequest request, String name){
         return request.getParameter(name);
