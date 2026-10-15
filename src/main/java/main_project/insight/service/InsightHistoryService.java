@@ -10,6 +10,8 @@ import main_project.insight.dto.InsightDto.*;
 import main_project.insight.dto.InsightHistoryDto;
 import main_project.insight.entity.InsightHistoryEntity;
 import main_project.insight.repository.InsightHistoryRepository;
+import main_project.member.entity.MemberEntity;
+import main_project.member.repository.MemberRepository;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -23,6 +25,7 @@ public class InsightHistoryService {
 
     private final InsightHistoryRepository repository;
     private final ObjectMapper mapper;
+    private final MemberRepository memberRepository;
 
     // [1] 분석 조건과 결과 저장
     @Transactional
@@ -32,6 +35,12 @@ public class InsightHistoryService {
             Result result,
             JsonNode metadata
     ) {
+
+        MemberEntity member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "회원을 찾을 수 없습니다."
+                ));
 
         String status;
 
@@ -69,7 +78,7 @@ public class InsightHistoryService {
                     .build();
 
             InsightHistoryEntity entity = repository.saveAndFlush(
-                    dto.toEntity()
+                    dto.toEntity(member)
             );
 
             return entity.getInsightId();
@@ -98,7 +107,7 @@ public class InsightHistoryService {
         }
 
         var result =
-                repository.findByMemberIdOrderByCreatedAtDescInsightIdDesc(
+                repository.findByMember_MemberIdOrderByCreatedAtDescInsightIdDesc(
                         memberId,
                         PageRequest.of(page, size)
                 );
@@ -196,7 +205,7 @@ public class InsightHistoryService {
             );
         }
 
-        return repository.findByInsightIdAndMemberId(
+        return repository.findByInsightIdAndMember_MemberId(
                         historyId,
                         memberId
                 )
