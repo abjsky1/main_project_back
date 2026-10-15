@@ -2,14 +2,12 @@ package main_project.model.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import main_project.model.entity.MessageEntity;
-import main_project.model.entity.SenderType;
 
 //  고객센터 채팅 메시지 Repository
 //  - 메소드 이름 규칙은 RoomRepository 위쪽 주석 참고
@@ -30,18 +28,8 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Integer>
     //  SELECT * FROM message WHERE room_id = ? AND created_at >= ? ORDER BY message_id ASC
     List<MessageEntity> findByRoomEntityRoomIdAndCreatedAtGreaterThanEqualOrderByMessageIdAsc(Integer roomId, LocalDateTime from);
 
-    // 한 방의 마지막 메시지 1개 (관리자 채팅방 목록의 미리보기 · "n분 전" 표시)
-    //  - findFirst + OrderByMessageIdDesc : 번호가 가장 큰(= 가장 최근) 메시지 1개
-    //  SELECT * FROM message WHERE room_id = ? ORDER BY message_id DESC LIMIT 1
-    Optional<MessageEntity> findFirstByRoomEntityRoomIdOrderByMessageIdDesc(Integer roomId);
-
-    // 안 읽은 메시지 수 세기
-    //  - senderType 에 "상대방" 종류를 넣음 (관리자가 볼 때는 SenderType.MEMBER , 회원이 볼 때는 SenderType.ADMIN)
-    //    → SYSTEM 메시지는 어느 쪽에서도 세지 않음
-    //    → enum 이라 SenderType 의 3가지 말고는 넣을 수 없음 (JPA 가 SQL 에는 "MEMBER" 같은 글자로 바꿔서 넣음)
-    //  - readAt 에는 "내가 마지막으로 읽은 시각" 을 넣음 (CreatedAtAfter : created_at > ?)
-    //  SELECT COUNT(*) FROM message WHERE room_id = ? AND sender_type = ? AND created_at > ?
-    long countByRoomEntityRoomIdAndSenderTypeAndCreatedAtAfter(Integer roomId, SenderType senderType, LocalDateTime readAt);
+    // ※ 예전에 있던 "방의 마지막 메시지" · "안 읽은 메시지 수 세기" 는 삭제함
+    //   → Redis(chat:last:{방번호} , chat:unread:...)가 바로 들고 있어서 DB 를 셀 필요가 없음 (ChatService ⑨ ⑫)
 
     // 지금까지 저장된 가장 큰 메시지 번호 (메시지가 없으면 0)
     //  - 서버가 켜질 때 Redis 번호표(chat:msg:seq)를 이 번호부터 이어서 시작하려고 (ChatService ⑫)
