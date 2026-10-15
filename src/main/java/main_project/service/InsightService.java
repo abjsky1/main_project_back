@@ -524,11 +524,9 @@ public class InsightService {
             String type
     ) {
 
-        if (request == null
-                || request.getCountryIds() == null
-                || request.getCountryIds().isEmpty()
-                || request.getCountryIds().size() > 3) {
-            bad("국가를 1~3개 선택해 주세요.");
+        if (request.getCountryIds() == null
+                || request.getCountryIds().size() != 1) {
+        bad("분석할 국가를 1개 선택해 주세요.");
         }
 
         boolean duplicateCountries =
@@ -1079,6 +1077,10 @@ public class InsightService {
             사용자 메시지는 서버가 구성한 JSON 자료다.
             asOf는 Asia/Seoul 기준 현재 날짜다.
             expectedStatus는 서버가 판단한 자료 상태다.
+
+            이번 요청은 국가 1개를 대상으로 한다.
+            제공된 국가의 지표와 업무 조건을 중심으로 분석하며,
+            입력에 없는 다른 국가의 수치나 비교 결과를 만들지 않는다.
 
             profile.memberType:
             SHIPPER는 수출입기업이다.
