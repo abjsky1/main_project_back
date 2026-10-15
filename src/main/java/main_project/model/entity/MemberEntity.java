@@ -93,14 +93,6 @@ public class MemberEntity extends BaseTime {
     @Builder.Default
     private List<Lscore1Entity> lscore1Entities = new ArrayList<>();
 
-    // 관심 국가 (interest)
-    @OneToMany(mappedBy = "memberEntity", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
-    @Builder.Default
-    private List<InterestEntity> interestEntities = new ArrayList<>();
-
-
 //  ---------- 이 회원이 관리자인지 (role 2 = 관리자) ----------
 //  - "관리자 = role 2" 규칙을 여기 한 곳에만 둠 → 권한 확인 · 마이페이지 · 감사 로그 · 채팅이 모두 이 메소드를 씀
 //    예) if (memberEntity.isAdmin()) { ... }
