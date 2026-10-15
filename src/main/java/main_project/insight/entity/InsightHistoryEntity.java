@@ -2,20 +2,27 @@ package main_project.insight.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import main_project.member.entity.MemberEntity;
 
 import java.time.Instant;
+
+import org.hibernate.annotations.ManyToAny;
 
 @Entity
 @Table(
@@ -38,8 +45,11 @@ public class InsightHistoryEntity {
     @Column(name = "insight_id")
     private Integer insightId;
 
-    @Column(name = "member_id", nullable = false, length = 100)
-    private String memberId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "member_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private MemberEntity member;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
