@@ -2638,7 +2638,4 @@ INSERT INTO audit (audit_id, member_id, action_id, action_detail, fip_address, a
 -- 데모 화주 계정 ybtex@test.com((주)영보월드와이드)에 3개를 미리 넣어 둠
 -- → 마이페이지에서 하나 더 추가하면 가장 먼저 넣은 미국(1번)이 빠짐 (InterestService 밀어내기)
 -- ============================================================================
-INSERT INTO interest (interest_id, member_id, country_id, created_at, updated_at) VALUES
-(1, 'dcdc8696-243a-43d1-ad68-138b293638f0', 1233, '2026-10-01 10:00:00', '2026-10-01 10:00:00'),
-(2, 'dcdc8696-243a-43d1-ad68-138b293638f0', 1048, '2026-10-02 10:00:00', '2026-10-02 10:00:00'),
-(3, 'dcdc8696-243a-43d1-ad68-138b293638f0', 1241, '2026-10-03 10:00:00', '2026-10-03 10:00:00');
+

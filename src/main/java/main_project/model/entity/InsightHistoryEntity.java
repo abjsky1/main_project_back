@@ -64,16 +64,16 @@ public class InsightHistoryEntity {
 
     @Lob // 큰 데이터를 저장
     @ToString.Exclude
-    @Column(name = "condition_json", nullable = false)
+    @Column(name = "condition_json", nullable = false, columnDefinition = "LONGTEXT")
     private String conditionJson;
 
     @Lob
     @ToString.Exclude
-    @Column(name = "result_json", nullable = false)
+    @Column(name = "result_json", nullable = false, columnDefinition = "LONGTEXT")
     private String resultJson;
 
     @Lob
     @ToString.Exclude
-    @Column(name = "metadata_json", nullable = false)
+    @Column(name = "metadata_json", nullable = false, columnDefinition = "LONGTEXT")
     private String metadataJson;
 }
