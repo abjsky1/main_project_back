@@ -22,8 +22,6 @@ import main_project.member.entity.MemberEntity;
 
 import java.time.Instant;
 
-import org.hibernate.annotations.ManyToAny;
-
 @Entity
 @Table(
         name = "insight_history",

@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 import main_project.insight.entity.InsightHistoryEntity;
+// 실제 경로에 맞게 MemberEntity import 추가
+import main_project.member.entity.MemberEntity;
 
 import java.time.Instant;
 
@@ -38,11 +40,12 @@ public class InsightHistoryDto {
     private String metadataJson;
 
     // DTO -> Entity
+    // 회원 객체는 서비스에서 조회하여 전달한다.
     // 새 기록의 번호는 DB에서 자동 생성한다.
-    public InsightHistoryEntity toEntity() {
+    public InsightHistoryEntity toEntity(MemberEntity member) {
 
         return InsightHistoryEntity.builder()
-                .memberId(memberId)
+                .member(member)
                 .createdAt(createdAt)
                 .status(status)
                 .itemName(itemName)
@@ -57,13 +60,11 @@ public class InsightHistoryDto {
     }
 
     // Entity -> DTO
-    public static InsightHistoryDto from(
-            InsightHistoryEntity entity
-    ) {
+    public static InsightHistoryDto from(InsightHistoryEntity entity) {
 
         return InsightHistoryDto.builder()
                 .insightId(entity.getInsightId())
-                .memberId(entity.getMemberId())
+                .memberId(entity.getMember().getMemberId())
                 .createdAt(entity.getCreatedAt())
                 .status(entity.getStatus())
                 .itemName(entity.getItemName())
