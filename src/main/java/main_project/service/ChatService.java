@@ -69,7 +69,13 @@ import main_project.model.repository.RoomRepository;
 //      메시지 번호 : Redis 번호표 chat:msg:seq (INCR) — DB 에 들어가기 전부터 번호가 있어야 화면이 순서 · 중복을 앎
 //      보낸 시각   : 서버가 받은 순간 (DB 에 들어간 시각이 아님)
 //      메시지 목록 : DB(옮긴 것) + Stream(아직 안 옮긴 최근 몇 초)을 합쳐서 돌려줌 (① ② ⑤)
-//    ※ 아직 DB 를 바로 세는 곳 (최대 3초 늦게 반영) : 안 읽음 수 (① ② ④)
+//
+//  - 안 읽음 수 · 마지막 메시지 : DB 를 세지 않고 Redis 에 숫자 · 메시지를 바로 들고 있음 (① ② ④)
+//      chat:unread:member:{방번호} = 회원이 안 읽은 상담원 메시지 수   (상담원이 보내면 +1 , 회원이 읽거나 보내면 0)
+//      chat:unread:admin:{방번호}  = 관리자가 안 읽은 회원 메시지 수   (회원이 보내면 +1 , 관리자가 읽거나 보내면 0)
+//      chat:last:{방번호}          = 그 방의 마지막 메시지 (관리자 목록 미리보기)
+//    → 메시지가 올 때 ⑨ 가 바꾸고 , 읽음 처리 ⑥ 이 0 으로 , 서버가 켜질 때 ⑫ 가 DB 에서 한 번 채움
+//    → 관리자 채팅방 목록 : 방마다 하던 SQL 2번(마지막 메시지 , 안 읽음 COUNT)이 없어짐
 //
 //  - Redis 캐시 (cache-aside) : 메시지 · 구독 · 읽음 처리마다 하던 회원 · 방 SELECT 를 줄임
 //      chat:member:{회원번호} = { status , admin , name }   60초 보관
@@ -128,6 +134,11 @@ public class ChatService {
     private static final String FLUSH_GROUP = "chat-flush";         // Stream 소비자 그룹 이름 (어디까지 옮겼는지 Redis 가 기억)
     private static final String FLUSH_CONSUMER = "server-1";        // 소비자 이름 (서버 1대라서 하나)
     private static final int FLUSH_BATCH_SIZE = 500;                // 한 번에 옮길 최대 개수
+
+//  ---------- 안 읽음 수 · 마지막 메시지 (뒤에 방 번호) ----------
+    private static final String UNREAD_MEMBER_PREFIX = "chat:unread:member:";   // 회원이 안 읽은 수
+    private static final String UNREAD_ADMIN_PREFIX = "chat:unread:admin:";     // 관리자가 안 읽은 수
+    private static final String LAST_PREFIX = "chat:last:";                     // 마지막 메시지
 
     private final RoomRepository roomRepository;
     private final MessageRepository messageRepository;
@@ -193,14 +204,10 @@ public class ChatService {
             if (messageDto.getSenderType() == SenderType.ADMIN) { messageDto.setSenderName(CENTER_NAME); }
         } );
 
-    //  6. 회원 기준 안 읽은 메시지 수 = 고객센터(ADMIN)가 보낸 것 중 "회원이 마지막으로 읽은 시각" 이후에 온 것
-    //     읽은 시각이 비어 있으면 상담이 켜진 시각부터 셈
-    //     ※ DB 만 세므로 아직 안 옮긴 최근 3초의 메시지는 빠짐 (화면은 웹소켓으로 받을 때 +1 해서 실시간으로 맞음)
-    //     SELECT COUNT(*) FROM message WHERE room_id = ? AND sender_type = 'ADMIN' AND created_at > ?
-        LocalDateTime readAt = roomEntity.getMemberReadAt();
-        if (readAt == null) { readAt = roomEntity.getOpenedAt(); }
-        Long unreadCount = messageRepository.countByRoomEntityRoomIdAndSenderTypeAndCreatedAtAfter(
-            roomEntity.getRoomId(), SenderType.ADMIN, readAt);
+    //  6. 회원 기준 안 읽은 메시지 수 — Redis 숫자를 그대로 읽음 (DB 를 세지 않음)
+    //     GET chat:unread:member:{방번호}   (없으면 = 아직 메시지가 없는 방 → 0)
+        String unreadText = stringRedisTemplate.opsForValue().get(UNREAD_MEMBER_PREFIX + roomEntity.getRoomId());
+        Long unreadCount = (unreadText == null) ? 0L : Long.valueOf(unreadText);
 
     //  7. 방 정보에 메시지 목록 + 안 읽음 수를 담아서 반환
         RoomDto roomDto = RoomDto.from(roomEntity);
@@ -298,7 +305,9 @@ public class ChatService {
 
         //  4-7. 회원은 방금 연 화면을 보고 있으므로 여기까지 읽은 것으로 (인사가 "안 읽음 1" 로 뜨지 않게)
         //       메시지 시각(now) "뒤" 의 시각이라 방금 만든 메시지보다 늦음
+        //       Redis 의 회원 안 읽음 수도 0 (다시 켠 방이면 지난 상담의 안 읽음이 남아 있을 수 있어서)
             roomEntity.setMemberReadAt(LocalDateTime.now());
+            stringRedisTemplate.opsForValue().set(UNREAD_MEMBER_PREFIX + roomEntity.getRoomId(), "0");
         }
 
     //  5. 이번 상담 메시지 = DB + Stream + 방금 만든 것 (① 내 채팅방 보기의 3 · 4번과 같음)
@@ -323,11 +332,9 @@ public class ChatService {
             if (messageDto.getSenderType() == SenderType.ADMIN) { messageDto.setSenderName(CENTER_NAME); }
         } );
 
-    //  7. 회원 기준 안 읽은 메시지 수 (① 의 6번과 같음)
-        LocalDateTime readAt = openedRoom.getMemberReadAt();
-        if (readAt == null) { readAt = openedRoom.getOpenedAt(); }
-        Long unreadCount = messageRepository.countByRoomEntityRoomIdAndSenderTypeAndCreatedAtAfter(
-            openedRoom.getRoomId(), SenderType.ADMIN, readAt);
+    //  7. 회원 기준 안 읽은 메시지 수 — Redis 숫자 (① 의 6번과 같음)
+        String unreadText = stringRedisTemplate.opsForValue().get(UNREAD_MEMBER_PREFIX + openedRoom.getRoomId());
+        Long unreadCount = (unreadText == null) ? 0L : Long.valueOf(unreadText);
 
     //  8. 방 정보에 메시지 목록 + 안 읽음 수를 담아서 반환
         RoomDto roomDto = RoomDto.from(openedRoom);
@@ -406,45 +413,28 @@ public class ChatService {
         roomEntities.addAll(roomRepository.findByStatusTrueOrderByOpenedAtAsc());
         roomEntities.addAll(roomRepository.findByStatusFalseOrderByClosedAtDesc());
 
-    //  2-1. 아직 DB 로 안 옮긴 메시지(Stream) 중 방마다 가장 최근 것 (방 번호 → 메시지)
-    //       Stream 은 한 번만 읽고 , 3-2 에서 방마다 꺼내 씀
-    //       Stream 은 보낸 순서대로 쌓이므로 같은 방이면 뒤에 나온 것(put 으로 덮어쓴 것)이 더 최근
-        Map<Integer, MessageDto> pendingLast = new HashMap<>();
-        stringRedisTemplate.opsForStream().range(STREAM_KEY, Range.unbounded()).forEach( (record) -> {
-            MessageDto pending = MessageDto.fromStream(record.getValue());
-            pendingLast.put(pending.getRoomId(), pending);
-        } );
-
     //  3. 방 엔티티 목록 → DTO 목록 , 방마다 마지막 메시지 + 안 읽음 수 넣기
-    //     ※ 방 1개당 쿼리가 2번씩(마지막 메시지 , 안 읽음 수) 나감
-    //       방이 수십 ~ 수백 개일 때는 문제없고 , 아주 많아지면 그때 쿼리를 합치는 방법으로 바꾸면 됨
+    //     둘 다 Redis 에서 읽음 → 방이 몇 개든 SQL 은 2번의 방 목록 조회뿐
+    //     (예전 : 방 1개당 SQL 2번 — 마지막 메시지 SELECT , 안 읽음 COUNT — 방 100개면 200번)
         List<RoomDto> result = roomEntities.stream().map( (roomEntity) -> {
 
         //  3-1. 방 정보
             RoomDto roomDto = RoomDto.from(roomEntity);
 
-        //  3-2. 마지막 메시지 1개 (메시지가 없으면 null)
-        //       DB 의 마지막 메시지와 Stream 의 마지막 메시지 중 번호가 큰 것 (Stream 쪽이 더 최근이면 아직 DB 에 없는 것)
+        //  3-2. 마지막 메시지 (메시지가 없는 방이면 Redis 에 없음 → null 그대로)
+        //       HGETALL chat:last:{방번호} — ⑨ 가 메시지를 보낼 때마다 덮어씀 (아직 DB 에 안 옮긴 메시지여도 바로 반영)
         //       관리자가 보는 거라 상담원 이름을 바꾸지 않고 그대로
-        //       SELECT * FROM message WHERE room_id = ? ORDER BY message_id DESC LIMIT 1
-            MessageEntity lastMessage = messageRepository.findFirstByRoomEntityRoomIdOrderByMessageIdDesc(roomEntity.getRoomId()).orElse(null);
-            MessageDto lastPending = pendingLast.get(roomEntity.getRoomId());
-            if (lastPending != null && (lastMessage == null || lastPending.getMessageId() > lastMessage.getMessageId())) {
-                lastPending.setRoomStatus(roomEntity.getStatus());
-                roomDto.setLastMessage(lastPending);
-            } else if (lastMessage != null) {
-                roomDto.setLastMessage(MessageDto.from(lastMessage));
+            Map<Object, Object> lastFields = stringRedisTemplate.opsForHash().entries(LAST_PREFIX + roomEntity.getRoomId());
+            if (!lastFields.isEmpty()) {
+                MessageDto lastMessage = MessageDto.fromStream(lastFields);
+                lastMessage.setRoomStatus(roomEntity.getStatus());
+                roomDto.setLastMessage(lastMessage);
             }
 
-        //  3-3. 관리자 기준 안 읽은 메시지 수 = 회원(MEMBER)이 보낸 것 중 "관리자가 마지막으로 읽은 시각" 이후에 온 것
-        //       읽은 시각이 비어 있으면 상담이 켜진 시각부터 셈
-        //       ※ DB 만 세므로 아직 안 옮긴 최근 3초의 메시지는 빠짐 (화면은 웹소켓으로 받을 때 +1 해서 실시간으로 맞음)
-        //       SELECT COUNT(*) FROM message WHERE room_id = ? AND sender_type = 'MEMBER' AND created_at > ?
-            LocalDateTime readAt = roomEntity.getAdminReadAt();
-            if (readAt == null) { readAt = roomEntity.getOpenedAt(); }
-            Long unreadCount = messageRepository.countByRoomEntityRoomIdAndSenderTypeAndCreatedAtAfter(
-                roomEntity.getRoomId(), SenderType.MEMBER, readAt);
-            roomDto.setUnreadCount(unreadCount);
+        //  3-3. 관리자 기준 안 읽은 메시지 수 (없으면 0)
+        //       GET chat:unread:admin:{방번호}
+            String unreadText = stringRedisTemplate.opsForValue().get(UNREAD_ADMIN_PREFIX + roomEntity.getRoomId());
+            roomDto.setUnreadCount((unreadText == null) ? 0L : Long.valueOf(unreadText));
 
             return roomDto;
         } ).toList();
@@ -546,10 +536,14 @@ public class ChatService {
 
     //  3. 읽은 시각을 지금으로 — 방을 SELECT 하지 않고 그 칸만 바로 UPDATE (RoomRepository 의 updateXxxReadAt)
     //     UPDATE room SET admin_read_at = ? , updated_at = ? WHERE room_id = ?   (회원이면 member_read_at)
+    //     + Redis 의 안 읽음 수도 0 (화면 · 목록은 이 숫자를 읽음 — DB 의 읽은 시각은 기록으로 남김)
+    //       SET chat:unread:admin:{방번호} 0   (회원이면 chat:unread:member:)
         if (isAdmin) {
             roomRepository.updateAdminReadAt(roomId, LocalDateTime.now());
+            stringRedisTemplate.opsForValue().set(UNREAD_ADMIN_PREFIX + roomId, "0");
         } else {
             roomRepository.updateMemberReadAt(roomId, LocalDateTime.now());
+            stringRedisTemplate.opsForValue().set(UNREAD_MEMBER_PREFIX + roomId, "0");
         }
 
         return true;
@@ -756,6 +750,28 @@ public class ChatService {
             stringRedisTemplate.delete(ROOM_CACHE_PREFIX + messageDto.getRoomId());
         }
 
+    //  0-3. 마지막 메시지 덮어쓰기 (관리자 채팅방 목록의 미리보기 — ④ 가 DB 대신 이걸 읽음)
+    //       HSET chat:last:{방번호} messageId 7 content "..." ...
+        stringRedisTemplate.opsForHash().putAll(LAST_PREFIX + messageDto.getRoomId(), messageDto.toStreamFields());
+
+    //  0-4. 안 읽음 수 (⑬ 의 "보낸 사람 쪽 읽은 시각" 과 같은 규칙)
+    //       - 회원이 보냄   → 관리자 안 읽음 +1 , 회원은 자기가 답했으니 앞의 것도 다 본 것 → 회원 안 읽음 0
+    //       - 상담원이 보냄 → 회원 안 읽음 +1 , 관리자 안 읽음 0
+    //       - 자동 인사(이름이 "고객센터" 인 ADMIN)는 사람이 보낸 게 아니라 세지 않음 (회원은 ② 에서 이미 읽은 것으로 함)
+    //       - SYSTEM(시작 · 종료 안내)은 어느 쪽에서도 세지 않음
+    //       increment( ) = INCR (없던 키면 0 에서 시작 → 1)
+    //       ※ 2번에서 이름을 "고객센터" 로 바꾸기 "전" 에 판단해야 함 (바꾼 뒤면 상담원 메시지도 자동 인사로 보임)
+        String roomId = String.valueOf(messageDto.getRoomId());
+        boolean autoWelcome = messageDto.getSenderType() == SenderType.ADMIN && CENTER_NAME.equals(messageDto.getSenderName());
+        if (messageDto.getSenderType() == SenderType.MEMBER) {
+            stringRedisTemplate.opsForValue().increment(UNREAD_ADMIN_PREFIX + roomId);
+            stringRedisTemplate.opsForValue().set(UNREAD_MEMBER_PREFIX + roomId, "0");
+        }
+        if (messageDto.getSenderType() == SenderType.ADMIN && !autoWelcome) {
+            stringRedisTemplate.opsForValue().increment(UNREAD_MEMBER_PREFIX + roomId);
+            stringRedisTemplate.opsForValue().set(UNREAD_ADMIN_PREFIX + roomId, "0");
+        }
+
     //  1. 관리자 화면으로 보내기 (상담원 이름 그대로)
     //     convertAndSend( 보낼 주소 , 내용물 ) : day062 와 같음 — 내용물은 JSON 글자로 바뀌어서 전달됨
         messageTemplate.convertAndSend(ADMIN_TOPIC, messageDto);
@@ -885,7 +901,11 @@ public class ChatService {
 //    - SCAN : 키를 조금씩(100개씩) 나눠서 찾음
 //        KEYS 는 한 번에 전부 찾느라 그동안 Redis 가 다른 명령(로그인 · 채팅)을 처리하지 못해서 쓰지 않음
 //  2. 메시지 번호표를 DB 의 가장 큰 번호부터 이어서 시작 (번호가 겹치면 같은 번호의 메시지가 DB 에 안 들어감)
-//  3. Stream 과 소비자 그룹 만들기 (⑬ 이 "어디까지 옮겼는지" 를 Redis 가 기억해 주는 장치)
+//  3. 안 읽음 수 · 마지막 메시지를 DB 에서 한 번 채우기
+//    - 왜 미리 채우나 (회원 · 방 캐시는 필요할 때 채우는데) : 안 읽음 수는 메시지가 올 때 +1 하는 숫자라
+//      시작값이 틀리면 계속 틀림 → 서버가 켜질 때 DB 기준으로 맞춰 두고 , 그 뒤로는 Redis 가 바로 셈
+//    - 지금은 create-drop 이라 켤 때 DB 에 메시지가 없어서 채울 것이 없음 (운영에서 DB 를 유지할 때 필요한 부분)
+//  4. Stream 과 소비자 그룹 만들기 (⑬ 이 "어디까지 옮겼는지" 를 Redis 가 기억해 주는 장치)
 //  =====================================================================
     @EventListener (ApplicationReadyEvent.class)
     @Transactional (propagation = Propagation.NOT_SUPPORTED)
@@ -901,7 +921,38 @@ public class ChatService {
     //     SET chat:msg:seq 0
         stringRedisTemplate.opsForValue().set(SEQ_KEY, String.valueOf(messageRepository.findMaxMessageId()));
 
-    //  3. Stream + 소비자 그룹 만들기
+    //  3-1. 방마다 회원 · 관리자 안 읽음 수 (예전 ① ④ 의 COUNT 를 모든 방에 한 번에 — 쿼리 1번)
+    //       LEFT JOIN : 메시지가 없는 방도 빠지지 않고 0 으로
+    //       SUM(조건) : MySQL 에서 조건이 맞으면 1 , 아니면 0 → 맞는 줄 수를 셈
+    //       읽은 시각이 비어 있으면 상담이 켜진 시각부터 셈 (COALESCE — 예전 규칙과 같음)
+        jdbcTemplate.queryForList(
+            "SELECT r.room_id, " +
+            "       COALESCE(SUM(m.sender_type = 'ADMIN'  AND m.created_at > COALESCE(r.member_read_at, r.opened_at)), 0) AS member_unread, " +
+            "       COALESCE(SUM(m.sender_type = 'MEMBER' AND m.created_at > COALESCE(r.admin_read_at, r.opened_at)), 0) AS admin_unread " +
+            "FROM room r LEFT JOIN message m ON m.room_id = r.room_id " +
+            "GROUP BY r.room_id")
+            .forEach( (row) -> {
+                stringRedisTemplate.opsForValue().set(UNREAD_MEMBER_PREFIX + row.get("room_id"), String.valueOf(row.get("member_unread")));
+                stringRedisTemplate.opsForValue().set(UNREAD_ADMIN_PREFIX + row.get("room_id"), String.valueOf(row.get("admin_unread")));
+            } );
+
+    //  3-2. 방마다 마지막 메시지 (방마다 가장 큰 메시지 번호의 메시지 — 쿼리 1번)
+    //       ResultSet( rs ) : SQL 결과 한 줄 — 칸 이름으로 값을 꺼냄 (springweb day036 BoardDao 의 rs 와 같은 것)
+        jdbcTemplate.query(
+            "SELECT m.message_id, m.room_id, m.sender_type, m.sender_name, m.content, m.created_at " +
+            "FROM message m JOIN (SELECT room_id, MAX(message_id) AS last_id FROM message GROUP BY room_id) x " +
+            "  ON m.message_id = x.last_id",
+            (rs, rowNum) -> MessageDto.builder()
+                .messageId(rs.getInt("message_id"))
+                .roomId(rs.getInt("room_id"))
+                .senderType(SenderType.valueOf(rs.getString("sender_type")))
+                .senderName(rs.getString("sender_name"))
+                .content(rs.getString("content"))
+                .createdAt(rs.getObject("created_at", LocalDateTime.class))
+                .build())
+            .forEach( (lastMessage) -> stringRedisTemplate.opsForHash().putAll(LAST_PREFIX + lastMessage.getRoomId(), lastMessage.toStreamFields()) );
+
+    //  4. Stream + 소비자 그룹 만들기
     //     XGROUP CREATE chat:stream chat-flush 0 MKSTREAM
     //     - 0 : Stream 의 처음부터 읽기 , MKSTREAM : Stream 이 아직 없으면 같이 만들기 (true)
     //     - StringRedisTemplate 에는 MKSTREAM 을 붙이는 메소드가 없어서 , execute 로 Redis 연결을 직접 받아서 명령을 보냄
@@ -909,7 +960,7 @@ public class ChatService {
         stringRedisTemplate.execute( (RedisCallback<String>) (connection) ->
             connection.streamCommands().xGroupCreate(STREAM_KEY.getBytes(StandardCharsets.UTF_8), FLUSH_GROUP, ReadOffset.from("0"), true) );
 
-    //  4. 준비 끝 → 이제부터 ⑬ 이 동작
+    //  5. 준비 끝 → 이제부터 ⑬ 이 동작
         streamReady = true;
     }
 
