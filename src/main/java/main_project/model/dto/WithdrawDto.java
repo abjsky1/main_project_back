@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-//  회원 탈퇴 요청 (POST /api/mypage/withdraw)
+//  회원 탈퇴 요청 (POST /api/members/me/withdraw)
 //  어떤 회원인지는 쿠키(AccessToken)로 정하고 , body 로는 비밀번호만 받음
 @Data
 @NoArgsConstructor

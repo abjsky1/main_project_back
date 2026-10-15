@@ -32,7 +32,7 @@ import main_project.util.JwtUtil;
 //  =====================================================================
 @RestController
 @RequiredArgsConstructor
-@RequestMapping ("/api/chat")      // 프론트 Vite 프록시가 /api 로 시작하는 주소만 백엔드로 전달
+@RequestMapping ("/api")      // 프론트 Vite 프록시가 /api 로 시작하는 주소만 백엔드로 전달 (관리자 목록은 /api/admin 아래라 여기서는 /api 까지만)
 public class ChatController {
 
     private final ChatService chatService;
@@ -41,10 +41,10 @@ public class ChatController {
 
 
 //  ① 내 채팅방 보기 (기업 회원)
-//  예) GET /api/chat/my-room
+//  예) GET /api/chat/rooms/me
 //  - 방 정보 + 이번 상담 메시지 + 안 읽음 수 , 상담을 한 번도 안 했으면 null
 //  @CookieValue : 로그인할 때 받은 출입증(AccessToken) 쿠키 (없으면 null)
-    @GetMapping ("/my-room")
+    @GetMapping ("/chat/rooms/me")
     public RoomDto getMyRoom(
             @CookieValue (name = "AccessToken", required = false) String accessToken){
 
@@ -60,10 +60,10 @@ public class ChatController {
 
 
 //  ② 상담 시작 (on) (기업 회원)
-//  예) POST /api/chat/my-room/open
+//  예) POST /api/chat/rooms/me/open
 //  - 방이 없으면 만들고 , 종료된 방이면 다시 켬 → 방 정보 + 이번 상담 메시지
 //  - 감사 로그 "상담 시작" 으로 기록됨 (AuditTargets 등록표)
-    @PostMapping ("/my-room/open")
+    @PostMapping ("/chat/rooms/me/open")
     public RoomDto openMyRoom(
             @CookieValue (name = "AccessToken", required = false) String accessToken){
 
@@ -83,7 +83,7 @@ public class ChatController {
 //  - 성공하면 true , 없는 방 · 남의 방 · 이미 종료된 방이면 false
 //  - 감사 로그 "상담 종료" 로 기록됨 (AuditTargets 등록표)
 //  @PathVariable : 주소 안의 {roomId} 자리 값을 꺼냄  예) /rooms/3/close → 3
-    @PutMapping ("/rooms/{roomId}/close")
+    @PutMapping ("/chat/rooms/{roomId}/close")
     public boolean closeRoom(
             @PathVariable ("roomId") Integer roomId,
             @CookieValue (name = "AccessToken", required = false) String accessToken){
@@ -100,9 +100,9 @@ public class ChatController {
 
 
 //  ④ 관리자 채팅방 목록 (관리자)
-//  예) GET /api/chat/rooms
+//  예) GET /api/admin/chat/rooms
 //  - 상담 중(켜진 시각 오래된 순) → 종료(꺼진 시각 최근 순) , 관리자가 아니면 null
-    @GetMapping ("/rooms")
+    @GetMapping ("/admin/chat/rooms")
     public List<RoomDto> getRooms(
             @CookieValue (name = "AccessToken", required = false) String accessToken){
 
@@ -117,7 +117,7 @@ public class ChatController {
 //  ⑤ 한 방의 메시지 목록 (그 방의 회원 또는 관리자)
 //  예) GET /api/chat/rooms/3/messages
 //  - 관리자 : 지난 상담까지 전부 , 회원 : 이번 상담만 , 없는 방 · 남의 방이면 null
-    @GetMapping ("/rooms/{roomId}/messages")
+    @GetMapping ("/chat/rooms/{roomId}/messages")
     public List<MessageDto> getMessages(
             @PathVariable ("roomId") Integer roomId,
             @CookieValue (name = "AccessToken", required = false) String accessToken){
@@ -137,7 +137,7 @@ public class ChatController {
 //  예) PUT /api/chat/rooms/3/read
 //  - 성공하면 true , 없는 방 · 남의 방이면 false
 //  - 감사 로그에는 기록하지 않음 (화면을 볼 때마다 불려서 로그가 너무 많아짐)
-    @PutMapping ("/rooms/{roomId}/read")
+    @PutMapping ("/chat/rooms/{roomId}/read")
     public boolean markRead(
             @PathVariable ("roomId") Integer roomId,
             @CookieValue (name = "AccessToken", required = false) String accessToken){

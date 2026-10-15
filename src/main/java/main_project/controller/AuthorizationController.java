@@ -18,13 +18,13 @@ import main_project.service.AuthorizationService;
 //    (관리자가 아니면 조회는 null , 변경은 false — springweb day058 [3] 내 정보 조회 의 "if(token == null){return null;}" 과 같은 방식)
 @RestController
 @RequiredArgsConstructor
-@RequestMapping ("/api/authorization")      // 프론트 Vite 프록시가 /api 로 시작하는 주소만 백엔드로 전달
+@RequestMapping ("/api/admin/members")      // 프론트 Vite 프록시가 /api 로 시작하는 주소만 백엔드로 전달
 public class AuthorizationController {
 
     private final AuthorizationService authorizationService;
 
     //  사용자 권한 관리 사용자 목록 조회 — 한 페이지(50명)씩 (필터 · 정렬 조건은 선택)
-    //  예) /api/authorization?name=김&email=gmail&roleName=ROLE_ADMIN&status=true&sort=login&dir=desc&page=1   (page 는 0 부터 → 1 = 2페이지)
+    //  예) /api/admin/members?name=김&email=gmail&roleName=ROLE_ADMIN&status=true&sort=login&dir=desc&page=1   (page 는 0 부터 → 1 = 2페이지)
     //  name : 이름 검색어 , email : 이메일 검색어 , 없으면 전체
     //  sort : join(가입순) / login(최근 로그인순) , 없으면 join
     //  dir  : asc(오름차순) / desc(내림차순) , 없으면 desc (가입순 내림차순 = 최근 가입한 회원부터)

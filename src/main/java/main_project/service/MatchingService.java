@@ -874,28 +874,7 @@ public class MatchingService {
 
     }
 
-    // [5] 매칭 결과 전체 조회 (관리자)
-    public List<MatchingDto> matchingRead() {
-
-        // [수정] 전체 매칭 결과 최신순 조회
-        List<MatchingEntity> matchingEntities = matchingRepository.findAllByOrderByCreatedAtDescMatchingIdDesc();
-
-        List<MatchingDto> matchingDtos = new ArrayList<>();
-
-        // 조회한 Entity를 DTO로 변환
-        for (MatchingEntity matchingEntity : matchingEntities) {
-
-            MatchingDto matchingDto = matchingDtoFrom(matchingEntity);
-
-            matchingDtos.add(matchingDto);
-
-        }
-
-        return matchingDtos;
-
-    }
-
-    // [5-1] 관리자 매칭 관리 화면 — 상태별 건수 5개 + 고른 상태의 매칭 한 페이지(50건)를 한 번에
+    // [5] 관리자 매칭 관리 화면 — 상태별 건수 5개 + 고른 상태의 매칭 한 페이지(50건)를 한 번에
     //  - search : 검색 · 정렬 조건 묶음 (MatchingSearchDto — 화면에서 각 컬럼 위 필터 줄에 있는 조건들)
     //      status        : all(전체) / linked(자동 매칭 연결) / requested(물류 수락 대기) / completed(성사) / failed(실패)
     //      keyword       : 화주사 · 운송사 회사 이름 검색어 , reason : 추천 이유 · 주의 사항 검색어
@@ -1420,7 +1399,7 @@ public class MatchingService {
     }
 
     // [12] MatchingEntity -> MatchingDto 변환
-    // 기존 matchingRead(), matchingMemberRead()에서
+    // 기존 matchingMemberRead() 등에서
     // 중복 작성했던 DTO 변환 코드를 하나로 정리
     private MatchingDto matchingDtoFrom(MatchingEntity matchingEntity) {
 

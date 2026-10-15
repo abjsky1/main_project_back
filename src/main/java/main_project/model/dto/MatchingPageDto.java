@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 //  =====================================================================
 //  관리자 매칭 관리 화면 한 번에 (서버 → 프론트)
 //
-//  - 쓰이는 곳 : GET /api/matching/admin?status=completed&page=0 (MatchingController)
+//  - 쓰이는 곳 : GET /api/admin/matchings?status=completed&page=0 (MatchingController)
 //  - 화면 위쪽 상태 카드 5칸의 숫자 + 아래 표에 들어갈 "고른 상태의 매칭 한 페이지(50건)" 를 한 번에 보냄
 //      예) { "allCount": 700, "linkedCount": 400, "requestedCount": 100, "completedCount": 100, "failedCount": 100,
 //            "matchings": [ ...50건... ], "page": 0, "size": 50, "totalPages": 2, "totalCount": 100 }

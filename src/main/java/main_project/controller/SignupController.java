@@ -13,7 +13,7 @@ import main_project.model.entity.MemberEntity;
 import main_project.service.SignupService;
 
 @RestController 
-@RequestMapping ("/api/signup")
+@RequestMapping ("/api/auth/signup")
 @RequiredArgsConstructor 
 public class SignupController {
 

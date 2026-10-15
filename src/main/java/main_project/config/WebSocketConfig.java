@@ -14,8 +14,8 @@ import lombok.RequiredArgsConstructor;
 //  =====================================================================
 //  웹소켓 + STOMP 설정 (springweb day062 의 WebSocketConfig 와 같은 구조)
 //
-//  - 소켓 주소 : /ws-chat                    → 프론트가 처음 한 번 연결하는 곳
-//                                              (프론트는 Vite 프록시를 거쳐 ws://localhost:8443/ws-chat 로 연결 — 8단계)
+//  - 소켓 주소 : /ws/chat                    → 프론트가 처음 한 번 연결하는 곳
+//                                              (프론트는 Vite 프록시를 거쳐 ws://localhost:8443/ws/chat 로 연결 — 8단계)
 //  - 발행 주소 : /pub + @MessageMapping 주소  → 프론트가 메시지를 "보내는" 곳   예) /pub/chat/message
 //  - 구독 주소 : /sub/...                     → 프론트가 메시지를 "받는" 곳
 //      /sub/chat/room/{roomId} : 회원 화면 (내 방의 새 메시지 · 상담 시작/종료 안내)
@@ -72,7 +72,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry){
 
-        registry.addEndpoint("/ws-chat")
+        registry.addEndpoint("/ws/chat")
     //  우리 화면(프론트) 주소에서 연결할 때만 받음 (day062 는 "*" = 어느 사이트든)
     //  - 브라우저는 연결 요청에 "이 페이지가 어느 주소에서 열렸는지(Origin)" 를 붙여 보냄 → 목록에 없으면 403 으로 거절
     //  - 왜 "*" 가 위험한가 : 쿠키는 포트가 달라도 같은 사이트(localhost)면 같이 보내짐

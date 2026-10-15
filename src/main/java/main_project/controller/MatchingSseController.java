@@ -16,7 +16,7 @@ import main_project.service.LoginService;
 import main_project.util.JwtUtil;
 
 @RestController
-@RequestMapping("/api/matching")
+@RequestMapping("/api/matchings")
 @RequiredArgsConstructor
 public class MatchingSseController {
 

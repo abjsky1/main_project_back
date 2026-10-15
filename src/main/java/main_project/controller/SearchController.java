@@ -3,7 +3,6 @@ package main_project.controller;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,9 +15,8 @@ import main_project.service.SearchHistoryService;
 import main_project.service.SearchService;
 
 @RestController
-@RequestMapping("/api/condition")
+@RequestMapping("/api/trade")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:8443", allowCredentials = "true")
 public class SearchController {
 
     private final SearchService searchService;

@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 //  =====================================================================
 //  감사 로그 한 페이지 (서버 → 프론트) — 페이지 처리(페이징) 응답
 //
-//  - 쓰이는 곳 : GET /api/audit?page=0 ... (AuditController)
+//  - 쓰이는 곳 : GET /api/admin/audits?page=0 ... (AuditController)
 //  - 로그 "전체" 가 아니라 "이번 페이지 50건" + 페이지 버튼을 그리는 데 필요한 숫자들을 같이 보냄
 //      예) { "logs": [ ...50건... ], "page": 2, "size": 50, "totalPages": 28, "totalCount": 1352 }
 //  - AuthorizationCountDto(사용자 수 + 사용자 목록) 와 같은 모양 : 목록 + 숫자 몇 개

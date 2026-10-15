@@ -31,7 +31,7 @@ import main_project.util.JwtUtil;
 
 
 @RestController
-@RequestMapping("/api/lscore")
+@RequestMapping("/api/conditions/logistics")
 @RequiredArgsConstructor
 public class Lscore1Controller {
 
@@ -196,7 +196,7 @@ public class Lscore1Controller {
 
 
     // [4] Lscore1에 연결된 Lscore2 조회
-    @GetMapping("/{lscore1Id}/lscore2")
+    @GetMapping("/{lscore1Id}/volume")
     public Lscore2Dto lscore2Read(
             @PathVariable("lscore1Id") Integer lscore1Id,
             @CookieValue(value = "AccessToken", required = false) String accessToken) {
@@ -217,7 +217,7 @@ public class Lscore1Controller {
 
 
     // [5] Lscore1에 연결된 Lscore3 조회
-    @GetMapping("/{lscore1Id}/lscore3")
+    @GetMapping("/{lscore1Id}/cargo")
     public Lscore3Dto lscore3Read(
             @PathVariable("lscore1Id") Integer lscore1Id,
             @CookieValue(value = "AccessToken", required = false) String accessToken) {

@@ -15,8 +15,8 @@ import main_project.model.entity.RoomEntity;
 //  채팅방 1개 (서버 → 프론트)
 //
 //  - 쓰이는 곳
-//      관리자 채팅방 목록 (GET /api/chat/rooms)         → 목록 한 줄 (messages 는 비워서 보냄 — 목록이 무거워지지 않게)
-//      회원 내 채팅방   (GET /api/chat/my-room 등)      → 방 정보 + 이번 상담 메시지(messages)
+//      관리자 채팅방 목록 (GET /api/admin/chat/rooms)   → 목록 한 줄 (messages 는 비워서 보냄 — 목록이 무거워지지 않게)
+//      회원 내 채팅방   (GET /api/chat/rooms/me 등)      → 방 정보 + 이번 상담 메시지(messages)
 //  - lastMessage , unreadCount , messages 는 엔티티에 없는 값이라 ChatService 가 계산해서 넣음
 //    (AuthorizationCountDto 의 사용자 수를 Service 가 세서 넣는 것과 같은 방식)
 //  - 회원 번호(member_id)는 보내지 않음 → 화면에 필요 없고 , 탈퇴 여부는 withdrawn 으로 알려 줌

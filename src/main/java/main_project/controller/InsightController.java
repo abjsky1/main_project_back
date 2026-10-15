@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,7 +32,6 @@ import main_project.service.InsightService;
 @RestController
 @RequestMapping("/api/insights")
 @RequiredArgsConstructor
-@CrossOrigin (origins = "http://localhost:8443", allowCredentials = "true")
 public class InsightController {
 
     private final InsightService insightService;

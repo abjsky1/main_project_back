@@ -21,7 +21,7 @@ import main_project.util.JwtUtil;
 import main_project.model.dto.MemberDto;
 
 @RestController
-@RequestMapping("/api/login")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class LoginController {
 
@@ -30,7 +30,7 @@ public class LoginController {
     private final RedisTokenService redisTokenService;
 
     // [1] 로그인
-    @PostMapping 
+    @PostMapping ("/login")
     public boolean login(@RequestBody LoginDto loginDto , HttpServletResponse response) {
         
         // 1. 서비스에게 로그인 검증 요청 
