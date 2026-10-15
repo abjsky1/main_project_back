@@ -59,7 +59,6 @@ public class AuditTargets {
         add("PUT",    "/api/mypage/password",   "비밀번호 변경",  "비밀번호 변경");
         add("POST",   "/api/mypage/withdraw",   "회원 탈퇴",      "회원 탈퇴");
     //  (탈퇴에 성공하면 회원이 이미 삭제된 뒤라서 , 이 로그는 "탈퇴 회원" 공통 계정으로 기록됨 — AuditService.record)
-    //  (관심 국가 추가·삭제 /api/interest 는 action 테이블에 맞는 작업 유형이 없어서 등록 안 함)
 
     //  ---------- 고객센터 채팅 (ChatController) ----------
         add("POST",   "/api/chat/my-room/open",        "상담 시작", "고객센터 상담 시작");
@@ -76,7 +75,6 @@ public class AuditTargets {
         add("GET", "/api/lscore",                     "데이터 조회", "물류 매칭 조건 목록 조회");
         add("GET", "/api/matching",                   "데이터 조회", "매칭 결과 목록 조회");
         add("GET", "/api/matching/admin",             "데이터 조회", "매칭 관리 목록 조회");
-        add("GET", "/api/matching/member/{memberId}", "데이터 조회", "내 매칭 알림 조회");
         add("GET", "/api/cumulative/trade",           "데이터 조회", "누적 무역 현황 조회");
         add("GET", "/api/exchangerate/nation",        "데이터 조회", "국가별 환율 조회");
         add("GET", "/api/today/exchangerate",         "데이터 조회", "당일 환율 조회");
@@ -86,6 +84,8 @@ public class AuditTargets {
     //  ※ 일부러 등록 안 한 것
     //    - /api/cscore/{id}/cscore2 처럼 표의 줄마다 반복 호출되는 상세 조회 (로그가 너무 많아짐)
     //    - 감사 로그 조회(/api/audit) 자체 (로그를 볼 때마다 로그가 쌓이는 것 방지)
+    //    - 내 매칭 알림 조회(/api/matching/member/{memberId}) : 사람이 누르는 게 아니라 헤더의 알림 종(SSE)이
+    //      다시 연결될 때마다(약 30초) 자동으로 부르는 조회 → 로그인한 탭 1개당 시간당 약 120줄이 쌓여서 뺌
     }
 
 

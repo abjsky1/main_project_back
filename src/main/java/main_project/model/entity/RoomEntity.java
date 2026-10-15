@@ -44,7 +44,7 @@ public class RoomEntity extends BaseTime {   // BaseTime 상속 → created_at(�
     private Integer roomId;
 
     // 이 방의 회원 (FK → member 테이블의 member_id)
-    //  - @OneToOne : 회원 1명 ↔ 방 1개 (InterestEntity 는 회원 1명에 관심 국가 여러 개라서 @ManyToOne)
+    //  - @OneToOne : 회원 1명 ↔ 방 1개 (Cscore1Entity 처럼 회원 1명에 여러 개면 @ManyToOne)
     //  - unique = true : 같은 member_id 가 두 번 들어갈 수 없음 → DB 가 "1인 1방" 을 지켜 줌
     //  - nullable = true , optional = true : 비어 있어도(NULL) 됨 → 탈퇴한 회원의 방은 NULL
     //      * FK 칸은 "member 테이블에 있는 회원 번호" 또는 "NULL" 만 넣을 수 있음
